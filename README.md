@@ -61,6 +61,46 @@ func main() {
 }
 ```
 
+## Quick start with pagination
+
+Same filter, plus sort and paging. `BuildPageableQuery` snapshots the conditions, so `Count` and `Find` each run on a fresh statement (GORM's `Count` injects a `SELECT count(*)` that would otherwise pollute the next `Find`).
+
+```go
+p, err := rsql.ParseListParams(
+    "name==John*;role.name==admin", // filter
+    "name:desc",                    // sort
+    "2",                            // page
+    "10",                           // page size
+)
+if err != nil {
+    panic(err)
+}
+
+pq, err := rsql.BuildPageableQuery(db, p, User{})
+if err != nil {
+    panic(err)
+}
+
+var total int64
+pq.NewQuery().Count(&total)
+
+var users []User
+pq.NewQuery().Limit(pq.Limit).Offset(pq.Offset).Find(&users)
+
+fmt.Println(total, users)
+```
+
+`ParseListParams` is the HTTP query-params flow — filter, sort, page and page size come in as strings. When building `Params` programmatically (not from HTTP), construct it directly with a parsed `Node`, `[]Sort` and `Pagination` instead. `pq.Page`, `pq.Limit` and `pq.Offset` are the sanitized pagination values — return them in your response for the client to render pagination controls.
+
+If the total count isn't needed, apply the same filter + sort + pagination in one call with `BuildQueryWithParams` and go straight to `Find`:
+
+```go
+query, _ := rsql.BuildQueryWithParams(db, p, User{})
+query.Find(&users)
+```
+
+Each step is also available separately — `BuildQuery` (filter + joins), `ApplySort` (ORDER BY, nested supported), `ApplyPagination` (clamped LIMIT/OFFSET).
+
 ## Query syntax
 
 Combined filters use the RSQL convention:
@@ -102,39 +142,9 @@ WHERE Roles__Role.name = 'operator'
 - `!=` and `=out=` on a `has-many` relation generate a `NOT IN (SELECT ...)` subquery instead of a naive join, so results are correct when the root has no matching children.
 
 ```go
-node, _ := rsql.Parse(`roles.role_name!=operator`)
+node, _ := rsql.Parse(`roles.RoleName!=operator`)
 // WHERE users.id NOT IN (
 //   SELECT t0.user_id FROM user_roles t0 WHERE t0.role_name = 'operator')
-```
-
-## List params (filter + sort + pagination)
-
-`ParseListParams` bundles filter parsing with sort and pagination — handy for HTTP query params.
-
-```go
-p, err := rsql.ParseListParams(
-    "status==ACTIVE", // filter
-    "name:desc,created_at:asc", // sort
-    "2",   // page
-    "25",  // page size
-)
-if err != nil {
-    // handle invalid filter
-}
-
-page, limit, offset := p.Pagination.Sanitize() // clamps to [1..MaxLimit], default 10
-
-query, _ := rsql.BuildQuery(db, p.Filter, User{})
-if len(p.Sorts) > 0 {
-    for _, s := range p.Sorts {
-        dir := "asc"
-        if s.Desc {
-            dir = "desc"
-        }
-        query = query.Order(s.Field + " " + dir)
-    }
-}
-query = query.Limit(limit).Offset(offset)
 ```
 
 ## API reference
@@ -143,6 +153,10 @@ query = query.Limit(limit).Offset(offset)
 |------------------------------|----------------------------------------------------|
 | `Parse(input string)`        | Parse an RSQL string into a `Node` AST. `""` → `nil` |
 | `BuildQuery(db, node, model)`| Apply the AST to a `*gorm.DB` (validates + joins)   |
+| `ApplySort(db, sorts, model)`| Validate fields + apply `ORDER BY` (nested supported) |
+| `ApplyPagination(db, pagination)` | Apply clamped `LIMIT`/`OFFSET`                 |
+| `BuildQueryWithParams(db, params, model)` | Apply filter + sort + pagination in one call |
+| `BuildPageableQuery(db, params, model)` | Filter + sort + sanitized pagination; `NewQuery()` for Count and Find |
 | `ParseSort(raw string)`      | Parse `field:desc,field2:asc` into `[]Sort`         |
 | `ParseListParams(...)`       | Parse filter + sort + page + page size into `Params` |
 | `Params`                     | `{ Pagination, Filter Node, Sorts []Sort }`          |
