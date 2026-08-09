@@ -136,7 +136,7 @@ ILIKE patterns are emitted with an explicit `ESCAPE '\'` clause so the escaping 
 
 Dot-separated selectors traverse struct relations. The builder resolves the GORM `foreignKey`/`references` tags and emits `LEFT JOIN`s automatically, using `__`-separated table aliases to avoid collisions.
 
-Each segment must match a **Go struct field name** (case-insensitive), not the table name, and there is no singular/plural inflection. If the field is `Roles`, use `roles`; if it's `Role`, use `role`. A mismatch fails loudly, e.g. `field "role" not found on User in "role.name"`.
+Each segment must match a **Go struct field name** (case-insensitive), not the table name, and there is no singular/plural inflection. If the field is `Roles`, use `roles`; if it's `Role`, use `role`. A mismatch fails loudly, e.g. `field "role" not found on User in "role.name"`. This applies to single-segment selectors too: `status==ACTIVE` is only valid when `Status` is a field on the root model, otherwise the query is rejected instead of interpolating the raw name into SQL.
 
 ```go
 node, _ := rsql.Parse(`roles.role.name==operator`)

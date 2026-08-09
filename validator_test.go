@@ -51,7 +51,7 @@ type testDeep4 struct {
 func TestValidatorSimpleSelector(t *testing.T) {
 	v := &Validator{rootModel: reflect.TypeOf(testUser{}), maxJoinDepth: defaultMaxJoinDepth}
 
-	node := &ComparisonNode{Selector: "status", Operator: "==", Arguments: "ACTIVE"}
+	node := &ComparisonNode{Selector: "name", Operator: "==", Arguments: "ACTIVE"}
 	if err := v.Validate(node); err != nil {
 		t.Fatalf("simple selector should be valid: %v", err)
 	}

@@ -13,6 +13,8 @@ type qbUser struct {
 	ID        string       `gorm:"column:id;primaryKey"`
 	Name      string       `gorm:"column:name"`
 	Email     string       `gorm:"column:email"`
+	Status    string       `gorm:"column:status"`
+	Price     string       `gorm:"column:price"`
 	CreatedAt string       `gorm:"column:created_at"`
 	Roles     []qbUserRole `gorm:"foreignKey:UserID;references:ID"`
 }
@@ -406,6 +408,39 @@ func TestBuildQueryNotEqualPlainValueStaysUnequal(t *testing.T) {
 	}
 }
 
+func TestBuildQueryInjectionValues(t *testing.T) {
+	tests := []struct {
+		input      string
+		wantClause string
+		wantArg    any
+		wantArgs   int
+	}{
+		{"name==' OR 1=1--", "qb_users.name = ?", "' OR 1=1--", 1},
+		{"name!=' OR 1=1--", "qb_users.name <> ?", "' OR 1=1--", 1},
+		{"name==x*' OR 1=1--", "qb_users.name ILIKE ? ESCAPE '\\'", "x%' OR 1=1--", 1},
+		{"status=in=(ACTIVE' OR '1'='1,PENDING)", "qb_users.status IN (?,?)", nil, 2},
+		{"status=out=(DELETED' OR '1'='1,x)", "qb_users.status NOT IN (?,?)", nil, 2},
+		{"roles.RoleName!=' OR 1=1--", "qb_users.id NOT IN (SELECT t0.user_id FROM qb_user_roles t0 WHERE t0.role_name = ?)", "' OR 1=1--", 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE "+tt.wantClause)
+			if strings.Contains(sql, "OR 1=1") || strings.Contains(sql, "--") {
+				t.Errorf("payload leaked into SQL string\nSQL: %s", sql)
+			}
+			if len(vars) != tt.wantArgs {
+				t.Fatalf("expected %d vars, got %v", tt.wantArgs, vars)
+			}
+			if tt.wantArg != nil && vars[0] != tt.wantArg {
+				t.Errorf("expected arg %v, got %v", tt.wantArg, vars)
+			}
+		})
+	}
+}
+
 func TestBuildQueryNullWildcardStillSearch(t *testing.T) {
 	tests := []struct {
 		input       string
@@ -560,6 +595,31 @@ func TestBuildQueryDeepJoin(t *testing.T) {
 	assertContains(t, sql, "LEFT JOIN qb_level3 A__B ON A__B.b_id = A.id")
 	assertContains(t, sql, "LEFT JOIN qb_level4 A__B__C ON A__B__C.c_id = A__B.id")
 	assertContains(t, sql, "LEFT JOIN qb_level5 A__B__C__D ON A__B__C__D.d_id = A__B__C.id")
+}
+
+func TestBuildQueryUnknownSingleSelector(t *testing.T) {
+	tests := []string{
+		"x--==1",
+		"*==1",
+		"unknownfield==1",
+	}
+
+	for _, input := range tests {
+		t.Run(input, func(t *testing.T) {
+			node, err := Parse(input)
+			if err != nil {
+				t.Fatalf("parse %q: %v", input, err)
+			}
+			db := newDryRunDB(t)
+			_, err = BuildQuery(db, node, qbUser{})
+			if err == nil {
+				t.Fatal("expected error for unknown single-segment selector")
+			}
+			if !strings.Contains(err.Error(), "not found") {
+				t.Errorf("expected 'not found' in error, got %v", err)
+			}
+		})
+	}
 }
 
 func TestBuildQueryInvalidSelector(t *testing.T) {

@@ -44,6 +44,9 @@ func (v *Validator) validateSelector(selector string) error {
 	segments := strings.Split(selector, ".")
 
 	if len(segments) < 2 {
+		if _, found := findFieldByFold(v.rootModel, segments[0]); !found {
+			return fmt.Errorf("field %q not found on %s in selector %q", segments[0], typeName(v.rootModel), selector)
+		}
 		return nil
 	}
 
