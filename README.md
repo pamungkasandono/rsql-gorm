@@ -115,14 +115,16 @@ Combined filters use the RSQL convention:
 
 | Operator | SQL          | Example                                   |
 |----------|--------------|-------------------------------------------|
-| `==`     | `=`, `ILIKE` | `name==Laptop*` (wildcard `*` → `ILIKE`)  |
-| `!=`     | `<>`         | `status!=ACTIVE`                          |
+| `==`     | `=`, `ILIKE`, `IS NULL` | `name==Laptop*` (wildcard `*` → `ILIKE`); `name==null` → `IS NULL` |
+| `!=`     | `<>`, `IS NOT NULL` | `status!=ACTIVE`; `name!=null` → `IS NOT NULL` |
 | `>`      | `>`          | `price>1000`                              |
 | `>=`     | `>=`         | `price>=1000`                             |
 | `<`      | `<`          | `price<1000`                              |
 | `<=`     | `<=`         | `price<=1000`                             |
 | `=in=`   | `IN`         | `status=in=(ACTIVE,PENDING)`             |
 | `=out=`  | `NOT IN`     | `status=out=(DELETED,ARCHIVED)`          |
+
+`==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this — `name==*null*` is a regular `ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
 
 ### Relations & joins
 

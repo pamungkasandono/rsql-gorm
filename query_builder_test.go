@@ -187,6 +187,77 @@ func TestBuildQueryWildcard(t *testing.T) {
 	}
 }
 
+func TestBuildQueryEqualityNull(t *testing.T) {
+	for _, v := range []string{"null", "NULL", "Null"} {
+		t.Run(v, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, "name=="+v, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name IS NULL")
+			if len(vars) != 0 {
+				t.Errorf("expected no vars, got %v", vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryNotEqualNull(t *testing.T) {
+	_, sql, vars := buildQuery(t, "name!=null", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "WHERE qb_users.name IS NOT NULL")
+	if len(vars) != 0 {
+		t.Errorf("expected no vars, got %v", vars)
+	}
+}
+
+func TestBuildQueryNullWildcardStillSearch(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name==*null*", "%null%"},
+		{"name==null*", "null%"},
+		{"name==*null", "%null"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryNullLiteralUnaffected(t *testing.T) {
+	_, sql, vars := buildQuery(t, "name==nullvalue", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "WHERE qb_users.name = ?")
+	if len(vars) != 1 || vars[0] != "nullvalue" {
+		t.Errorf("expected vars [nullvalue], got %v", vars)
+	}
+}
+
+func TestBuildQueryNullTrailingSpace(t *testing.T) {
+	_, sql, vars := buildQuery(t, "name==null ", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "WHERE qb_users.name IS NULL")
+	if len(vars) != 0 {
+		t.Errorf("expected no vars, got %v", vars)
+	}
+}
+
+func TestBuildQueryNullCombined(t *testing.T) {
+	_, sql, vars := buildQuery(t, "name==null;status==ACTIVE", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "qb_users.name IS NULL AND qb_users.status = ?")
+	if len(vars) != 1 || vars[0] != "ACTIVE" {
+		t.Errorf("expected vars [ACTIVE], got %v", vars)
+	}
+}
+
 func TestBuildQueryInOut(t *testing.T) {
 	_, sql, vars := buildQuery(t, "status=in=(ACTIVE,PENDING)", qbUser{}, &qbUser{})
 	assertContains(t, sql, "WHERE qb_users.status IN (?,?)")
@@ -198,6 +269,24 @@ func TestBuildQueryInOut(t *testing.T) {
 	assertContains(t, sql, "WHERE qb_users.status NOT IN (?,?)")
 	if len(vars) != 2 || vars[0] != "DELETED" || vars[1] != "ARCHIVED" {
 		t.Errorf("expected vars [DELETED ARCHIVED], got %v", vars)
+	}
+}
+
+func TestBuildQueryInNullIsLiteral(t *testing.T) {
+	_, sql, vars := buildQuery(t, "status=in=(ACTIVE,null)", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "WHERE qb_users.status IN (?,?)")
+	if len(vars) != 2 || vars[0] != "ACTIVE" || vars[1] != "null" {
+		t.Errorf("expected vars [ACTIVE null], got %v", vars)
+	}
+}
+
+func TestBuildQueryOutNullIsLiteral(t *testing.T) {
+	_, sql, vars := buildQuery(t, "status=out=(DELETED,null)", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "WHERE qb_users.status NOT IN (?,?)")
+	if len(vars) != 2 || vars[0] != "DELETED" || vars[1] != "null" {
+		t.Errorf("expected vars [DELETED null], got %v", vars)
 	}
 }
 

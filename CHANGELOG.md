@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `ParseListParams` now rejects non-numeric page and page size values with an
   error, instead of silently clamping them to the defaults.
 
+### Added
+
+- `==null` / `!=null` (case-insensitive) now map to `IS NULL` / `IS NOT NULL`
+  instead of comparing the literal string. Wildcard values (e.g. `*null*`)
+  still generate `ILIKE` searches; `null` inside `=in=` / `=out=` remains a
+  string literal.
+
 ## [0.1.0] - 2026-08-09
 
 ### Added

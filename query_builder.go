@@ -430,11 +430,24 @@ func buildEquality(column string, args any) (string, []any, error) {
 		return column + " ILIKE ?", []any{pattern}, nil
 	}
 
+	if isNullKeyword(val) {
+		return column + " IS NULL", nil, nil
+	}
+
 	return column + " = ?", []any{val}, nil
 }
 
 func buildNotEqual(column string, args any) (string, []any, error) {
+	if val, ok := args.(string); ok && isNullKeyword(val) {
+		return column + " IS NOT NULL", nil, nil
+	}
 	return column + " <> ?", []any{args}, nil
+}
+
+// isNullKeyword reports whether a string value is exactly "null" (any case),
+// ignoring surrounding whitespace. Wildcard-based searches are unaffected.
+func isNullKeyword(val string) bool {
+	return strings.EqualFold(strings.TrimSpace(val), "null")
 }
 
 func buildIn(column string, args any) (string, []any, error) {
