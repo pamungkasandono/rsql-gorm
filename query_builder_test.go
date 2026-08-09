@@ -258,6 +258,29 @@ func TestBuildQueryPercentUnderscoreLiteral(t *testing.T) {
 	}
 }
 
+func TestBuildQueryBackslashBeforeOrdinaryChar(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name==*wa.me\\+12345678*", "%wa.me\\+12345678%"},
+		{"name==*foo\\bar*", "%foo\\bar%"},
+		{"name==*path\\to*", "%path\\to%"},
+		{"name==*wa.me\\\\123*", "%wa.me\\\\123%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ? ESCAPE '\\'")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
 func TestBuildQueryEqualityNull(t *testing.T) {
 	for _, v := range []string{"null", "NULL", "Null"} {
 		t.Run(v, func(t *testing.T) {

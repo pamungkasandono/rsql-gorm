@@ -126,7 +126,7 @@ Combined filters use the RSQL convention:
 
 `==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this: `name==*null*` is a regular `ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
 
-Wildcard `*` maps to SQL `%`. Use `\*` for a literal asterisk: `name==a\*b` searches for `a*b`, `name==a*b` searches for any value starting `a` and ending `b`. `%` and `_` are always literal in wildcard values, so `name==*100%*` finds values containing `100%` and `name==*user_name*` finds values containing `user_name`.
+Wildcard `*` maps to SQL `%`. Use `\*` for a literal asterisk: `name==a\*b` searches for `a*b`, `name==a*b` searches for any value starting `a` and ending `b`. `%` and `_` are always literal in wildcard values, so `name==*100%*` finds values containing `100%` and `name==*user_name*` finds values containing `user_name`. A backslash before any other character is harmless and matches that character literally (`name==*wa.me\+123*` matches `+`); to match a literal backslash in the data, double it (`name==*wa.me\\123*`).
 
 ILIKE patterns are emitted with an explicit `ESCAPE '\'` clause so the escaping above behaves the same across dialects instead of relying on the database's default escape character (PostgreSQL/MySQL default to `\`, SQLite has none).
 
