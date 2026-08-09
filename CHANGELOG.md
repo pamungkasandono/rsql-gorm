@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BuildQuery` extracted its model initialization into `newQueryBuilder`, now
   shared with `ApplySort`.
 
+### Fixed
+
+- `ParseListParams` now rejects non-numeric page and page size values with an
+  error, instead of silently clamping them to the defaults.
+
 ## [0.1.0] - 2026-08-09
 
 ### Added

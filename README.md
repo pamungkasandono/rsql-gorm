@@ -90,7 +90,7 @@ pq.NewQuery().Limit(pq.Limit).Offset(pq.Offset).Find(&users)
 fmt.Println(total, users)
 ```
 
-`ParseListParams` is the HTTP query-params flow — filter, sort, page and page size come in as strings. When building `Params` programmatically (not from HTTP), construct it directly with a parsed `Node`, `[]Sort` and `Pagination` instead. `pq.Page`, `pq.Limit` and `pq.Offset` are the sanitized pagination values — return them in your response for the client to render pagination controls.
+`ParseListParams` is the HTTP query-params flow — filter, sort, page and page size come in as strings. Page and page size must be digits only (empty means default); anything else returns an error instead of silently clamping. When building `Params` programmatically (not from HTTP), construct it directly with a parsed `Node`, `[]Sort` and `Pagination` instead. `pq.Page`, `pq.Limit` and `pq.Offset` are the sanitized pagination values — return them in your response for the client to render pagination controls.
 
 If the total count isn't needed, apply the same filter + sort + pagination in one call with `BuildQueryWithParams` and go straight to `Find`:
 

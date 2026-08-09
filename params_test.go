@@ -136,3 +136,24 @@ func TestParseListParamsInvalidFilter(t *testing.T) {
 		t.Fatal("expected error for invalid filter")
 	}
 }
+
+func TestParseListParamsNonNumericPage(t *testing.T) {
+	_, err := ParseListParams("", "", "abc", "")
+	if err == nil {
+		t.Fatal("expected error for non-numeric page")
+	}
+}
+
+func TestParseListParamsNonNumericPageSize(t *testing.T) {
+	_, err := ParseListParams("", "", "", "1.5")
+	if err == nil {
+		t.Fatal("expected error for non-numeric page size")
+	}
+}
+
+func TestParseListParamsNegativePage(t *testing.T) {
+	_, err := ParseListParams("", "", "-2", "")
+	if err == nil {
+		t.Fatal("expected error for negative page")
+	}
+}

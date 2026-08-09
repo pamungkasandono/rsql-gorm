@@ -1,6 +1,9 @@
 package rsql
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 func ParseListParams(filter, sort, pageStr, pageSizeStr string) (*Params, error) {
 	var p Params
@@ -17,15 +20,32 @@ func ParseListParams(filter, sort, pageStr, pageSizeStr string) (*Params, error)
 		return nil, err
 	}
 
-	p.Pagination.Page, _ = strconv.Atoi(defaultIfEmpty(pageStr, "1"))
-	p.Pagination.Limit, _ = strconv.Atoi(defaultIfEmpty(pageSizeStr, "10"))
+	p.Pagination.Page, err = parseNumericParam(pageStr, "page", 1)
+	if err != nil {
+		return nil, err
+	}
+	p.Pagination.Limit, err = parseNumericParam(pageSizeStr, "page size", DefaultLimit)
+	if err != nil {
+		return nil, err
+	}
 
 	return &p, nil
 }
 
-func defaultIfEmpty(s, fallback string) string {
+// parseNumericParam parses a query param that must be digits only (empty means
+// fallback). Non-numeric input returns an error instead of silently clamping.
+func parseNumericParam(s, name string, fallback int) (int, error) {
 	if s == "" {
-		return fallback
+		return fallback, nil
 	}
-	return s
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return 0, fmt.Errorf("pagination: %s %q must be numeric", name, s)
+		}
+	}
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, fmt.Errorf("pagination: %s %q must be numeric", name, s)
+	}
+	return n, nil
 }
