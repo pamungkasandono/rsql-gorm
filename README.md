@@ -126,6 +126,8 @@ Combined filters use the RSQL convention:
 
 `==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this: `name==*null*` is a regular `ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
 
+Wildcard `*` maps to SQL `%`. Use `\*` for a literal asterisk: `name==a\*b` searches for `a*b`, `name==a*b` searches for any value starting `a` and ending `b`.
+
 ### Relations & joins
 
 Dot-separated selectors traverse struct relations. The builder resolves the GORM `foreignKey`/`references` tags and emits `LEFT JOIN`s automatically, using `__`-separated table aliases to avoid collisions.

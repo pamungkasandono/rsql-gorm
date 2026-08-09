@@ -426,8 +426,7 @@ func buildEquality(column string, args any) (string, []any, error) {
 	}
 
 	if strings.Contains(val, "*") {
-		pattern := strings.ReplaceAll(val, "*", "%")
-		return column + " ILIKE ?", []any{pattern}, nil
+		return column + " ILIKE ?", []any{wildcardPattern(val)}, nil
 	}
 
 	if isNullKeyword(val) {
@@ -435,6 +434,27 @@ func buildEquality(column string, args any) (string, []any, error) {
 	}
 
 	return column + " = ?", []any{val}, nil
+}
+
+// wildcardPattern converts RSQL wildcards (*) into SQL LIKE patterns (%). A
+// backslash escapes the next character, so \* stays a literal asterisk in the
+// pattern.
+func wildcardPattern(val string) string {
+	var b strings.Builder
+	b.Grow(len(val))
+	for i := 0; i < len(val); i++ {
+		if val[i] == '\\' && i+1 < len(val) && val[i+1] == '*' {
+			b.WriteByte('*')
+			i++
+			continue
+		}
+		if val[i] == '*' {
+			b.WriteByte('%')
+			continue
+		}
+		b.WriteByte(val[i])
+	}
+	return b.String()
 }
 
 func buildNotEqual(column string, args any) (string, []any, error) {

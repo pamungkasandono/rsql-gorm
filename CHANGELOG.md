@@ -34,6 +34,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   instead of comparing the literal string. Wildcard values (e.g. `*null*`)
   still generate `ILIKE` searches; `null` inside `=in=` / `=out=` remains a
   string literal.
+- `\*` escapes the wildcard so a literal asterisk can be searched: `a\*b`
+  becomes the pattern `a*b` instead of `a%b`. An unescaped `*` still maps to
+  SQL `%`.
 
 ## [0.1.0] - 2026-08-09
 

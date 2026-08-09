@@ -187,6 +187,53 @@ func TestBuildQueryWildcard(t *testing.T) {
 	}
 }
 
+func TestBuildQueryWildcardEdgeCases(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name==a*b*c", "a%b%c"},
+		{"name==*", "%"},
+		{"name==a**b", "a%%b"},
+		{"name==***", "%%%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryEscapedAsterisk(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name==a\\*b", "a*b"},
+		{"name==\\*", "*"},
+		{"name==a\\*b*c", "a*b%c"},
+		{"name==a\\*b\\*c", "a*b*c"},
+		{"name==a\\b*c", "a\\b%c"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
 func TestBuildQueryEqualityNull(t *testing.T) {
 	for _, v := range []string{"null", "NULL", "Null"} {
 		t.Run(v, func(t *testing.T) {
