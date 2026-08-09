@@ -452,9 +452,12 @@ func needsPatternConversion(val string) bool {
 }
 
 // wildcardPattern converts an RSQL value into a SQL LIKE pattern. Only `*` is
-// a wildcard (mapped to SQL `%`); `%` and `_` are always literal, so they are
-// backslash-escaped in the pattern. A backslash escapes the next character:
-// `\*` stays a literal asterisk, `\%` and `\_` stay literal too.
+// a wildcard (mapped to SQL `%`); `%`, `_` and `\` are always literal, so they
+// are backslash-escaped in the pattern. A backslash escapes the next character:
+// `\*` stays a literal asterisk, `\%` and `\_` stay literal, and `\\` is a
+// literal backslash (so `\\*` is a literal backslash followed by a wildcard).
+// A backslash before any other character, or at the end of the value, is
+// itself a literal backslash.
 func wildcardPattern(val string) string {
 	var b strings.Builder
 	b.Grow(len(val))
@@ -467,6 +470,13 @@ func wildcardPattern(val string) string {
 			b.WriteByte('\\')
 			b.WriteByte(val[i+1])
 			i++
+		case val[i] == '\\' && i+1 < len(val) && val[i+1] == '\\':
+			b.WriteByte('\\')
+			b.WriteByte('\\')
+			i++
+		case val[i] == '\\':
+			b.WriteByte('\\')
+			b.WriteByte('\\')
 		case val[i] == '*':
 			b.WriteByte('%')
 		case val[i] == '%' || val[i] == '_':

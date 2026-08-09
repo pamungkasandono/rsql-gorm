@@ -41,6 +41,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `100%`, `*user_name*` for values containing `user_name`. Their SQL `LIKE`
   wildcard meaning is escaped automatically; `\%` and `\_` work the same as
   their unescaped forms.
+- Backslashes in wildcard values are literal: `*.com\city\` matches the path
+  `.com\city\`, `\\` matches a single literal backslash. `\\*` is a literal
+  backslash followed by a wildcard (e.g. `*.com\city\\*` matches any value
+  containing the path `.com\city\`); `\*` alone stays a literal asterisk and
+  `\%`/`\_` work the same as their unescaped forms.
 - `ILIKE` patterns now carry an explicit `ESCAPE '\'` clause so escaping
   behaves the same across dialects instead of relying on the database's
   default escape character.

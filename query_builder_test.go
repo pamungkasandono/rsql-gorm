@@ -219,7 +219,7 @@ func TestBuildQueryEscapedAsterisk(t *testing.T) {
 		{"name==\\*", "*"},
 		{"name==a\\*b*c", "a*b%c"},
 		{"name==a\\*b\\*c", "a*b*c"},
-		{"name==a\\b*c", "a\\b%c"},
+		{"name==a\\b*c", "a\\\\b%c"},
 	}
 
 	for _, tt := range tests {
@@ -263,10 +263,17 @@ func TestBuildQueryBackslashBeforeOrdinaryChar(t *testing.T) {
 		input       string
 		wantPattern string
 	}{
-		{"name==*wa.me\\+12345678*", "%wa.me\\+12345678%"},
-		{"name==*foo\\bar*", "%foo\\bar%"},
-		{"name==*path\\to*", "%path\\to%"},
+		{"name==*wa.me\\+12345678*", "%wa.me\\\\+12345678%"},
+		{"name==*foo\\bar*", "%foo\\\\bar%"},
+		{"name==*path\\to*", "%path\\\\to%"},
 		{"name==*wa.me\\\\123*", "%wa.me\\\\123%"},
+		{"name==*.com\\city\\", "%.com\\\\city\\\\"},
+		{"name==*foo\\", "%foo\\\\"},
+		{"name==*.com\\city\\*", "%.com\\\\city*"},
+		{"name==*.com\\city*", "%.com\\\\city%"},
+		{"name==*.com\\city\\\\*", "%.com\\\\city\\\\%"},
+		{"name==*a\\\\b*", "%a\\\\b%"},
+		{"name==*a\\\\\\\\*", "%a\\\\\\\\%"},
 	}
 
 	for _, tt := range tests {
