@@ -128,6 +128,8 @@ Combined filters use the RSQL convention:
 
 Dot-separated selectors traverse struct relations. The builder resolves the GORM `foreignKey`/`references` tags and emits `LEFT JOIN`s automatically, using `__`-separated table aliases to avoid collisions.
 
+Each segment must match a **Go struct field name** (case-insensitive) — not the table name, and there is no singular/plural inflection. If the field is `Roles`, use `roles`; if it's `Role`, use `role`. A mismatch fails loudly, e.g. `field "role" not found on User in "role.name"`.
+
 ```go
 node, _ := rsql.Parse(`roles.role.name==operator`)
 ```
