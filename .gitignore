@@ -16,17 +16,24 @@
 coverage.*
 *.coverprofile
 profile.cov
+*.prof
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories
+/vendor/
 
 # Go workspace file
 go.work
 go.work.sum
 
+# Editor/IDE
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
 # env file
 .env
+.env.*
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# Session artifacts
+ses_*.json
