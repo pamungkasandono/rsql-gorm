@@ -37,6 +37,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `\*` escapes the wildcard so a literal asterisk can be searched: `a\*b`
   becomes the pattern `a*b` instead of `a%b`. An unescaped `*` still maps to
   SQL `%`.
+- `%` and `_` are always literal: `*100%*` searches for values containing
+  `100%`, `*user_name*` for values containing `user_name`. Their SQL `LIKE`
+  wildcard meaning is escaped automatically; `\%` and `\_` work the same as
+  their unescaped forms.
+- `ILIKE` patterns now carry an explicit `ESCAPE '\'` clause so escaping
+  behaves the same across dialects instead of relying on the database's
+  default escape character.
 
 ## [0.1.0] - 2026-08-09
 

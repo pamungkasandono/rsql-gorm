@@ -425,8 +425,8 @@ func buildEquality(column string, args any) (string, []any, error) {
 		return column + " = ?", []any{args}, nil
 	}
 
-	if strings.Contains(val, "*") {
-		return column + " ILIKE ?", []any{wildcardPattern(val)}, nil
+	if needsPatternConversion(val) {
+		return column + " ILIKE ? ESCAPE '\\'", []any{wildcardPattern(val)}, nil
 	}
 
 	if isNullKeyword(val) {
@@ -436,23 +436,45 @@ func buildEquality(column string, args any) (string, []any, error) {
 	return column + " = ?", []any{val}, nil
 }
 
-// wildcardPattern converts RSQL wildcards (*) into SQL LIKE patterns (%). A
-// backslash escapes the next character, so \* stays a literal asterisk in the
-// pattern.
+// needsPatternConversion reports whether a value must go through the LIKE
+// pipeline: it contains a wildcard (*) or an escape sequence (\% or \_), which
+// changes the effective literal value.
+func needsPatternConversion(val string) bool {
+	for i := 0; i < len(val); i++ {
+		if val[i] == '*' {
+			return true
+		}
+		if val[i] == '\\' && i+1 < len(val) && (val[i+1] == '%' || val[i+1] == '_') {
+			return true
+		}
+	}
+	return false
+}
+
+// wildcardPattern converts an RSQL value into a SQL LIKE pattern. Only `*` is
+// a wildcard (mapped to SQL `%`); `%` and `_` are always literal, so they are
+// backslash-escaped in the pattern. A backslash escapes the next character:
+// `\*` stays a literal asterisk, `\%` and `\_` stay literal too.
 func wildcardPattern(val string) string {
 	var b strings.Builder
 	b.Grow(len(val))
 	for i := 0; i < len(val); i++ {
-		if val[i] == '\\' && i+1 < len(val) && val[i+1] == '*' {
+		switch {
+		case val[i] == '\\' && i+1 < len(val) && val[i+1] == '*':
 			b.WriteByte('*')
 			i++
-			continue
-		}
-		if val[i] == '*' {
+		case val[i] == '\\' && i+1 < len(val) && (val[i+1] == '%' || val[i+1] == '_'):
+			b.WriteByte('\\')
+			b.WriteByte(val[i+1])
+			i++
+		case val[i] == '*':
 			b.WriteByte('%')
-			continue
+		case val[i] == '%' || val[i] == '_':
+			b.WriteByte('\\')
+			b.WriteByte(val[i])
+		default:
+			b.WriteByte(val[i])
 		}
-		b.WriteByte(val[i])
 	}
 	return b.String()
 }

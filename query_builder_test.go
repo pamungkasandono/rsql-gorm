@@ -179,7 +179,7 @@ func TestBuildQueryWildcard(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
 
-			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ? ESCAPE '\\'")
 			if len(vars) != 1 || vars[0] != tt.wantPattern {
 				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
 			}
@@ -202,7 +202,7 @@ func TestBuildQueryWildcardEdgeCases(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
 
-			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ? ESCAPE '\\'")
 			if len(vars) != 1 || vars[0] != tt.wantPattern {
 				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
 			}
@@ -226,7 +226,31 @@ func TestBuildQueryEscapedAsterisk(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
 
-			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ? ESCAPE '\\'")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryPercentUnderscoreLiteral(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name==*100%*", "%100\\%%"},
+		{"name==100\\%", "100\\%"},
+		{"name==*100\\%*", "%100\\%%"},
+		{"name==*user_name*", "%user\\_name%"},
+		{"name==user\\_name", "user\\_name"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ? ESCAPE '\\'")
 			if len(vars) != 1 || vars[0] != tt.wantPattern {
 				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
 			}
@@ -270,7 +294,7 @@ func TestBuildQueryNullWildcardStillSearch(t *testing.T) {
 		t.Run(tt.input, func(t *testing.T) {
 			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
 
-			assertContains(t, sql, "WHERE qb_users.name ILIKE ?")
+			assertContains(t, sql, "WHERE qb_users.name ILIKE ? ESCAPE '\\'")
 			if len(vars) != 1 || vars[0] != tt.wantPattern {
 				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
 			}
