@@ -1,6 +1,6 @@
 # rsql-gorm
 
-RQL-style (Resource Query Language) filter builder for [GORM](https://gorm.io). Parse a compact query string into GORM `Where` clauses with automatic joins for relations — without string concatenation or SQL injection.
+RQL-style (Resource Query Language) filter builder for [GORM](https://gorm.io). Parse a compact query string into GORM `Where` clauses with automatic joins for relations, without string concatenation or SQL injection.
 
 ## Install
 
@@ -90,7 +90,7 @@ pq.NewQuery().Limit(pq.Limit).Offset(pq.Offset).Find(&users)
 fmt.Println(total, users)
 ```
 
-`ParseListParams` is the HTTP query-params flow — filter, sort, page and page size come in as strings. Page and page size must be digits only (empty means default); anything else returns an error instead of silently clamping. When building `Params` programmatically (not from HTTP), construct it directly with a parsed `Node`, `[]Sort` and `Pagination` instead. `pq.Page`, `pq.Limit` and `pq.Offset` are the sanitized pagination values — return them in your response for the client to render pagination controls.
+`ParseListParams` is the HTTP query-params flow: filter, sort, page and page size come in as strings. Page and page size must be digits only (empty means default); anything else returns an error instead of silently clamping. When building `Params` programmatically (not from HTTP), construct it directly with a parsed `Node`, `[]Sort` and `Pagination` instead. `pq.Page`, `pq.Limit` and `pq.Offset` are the sanitized pagination values, return them in your response for the client to render pagination controls.
 
 If the total count isn't needed, apply the same filter + sort + pagination in one call with `BuildQueryWithParams` and go straight to `Find`:
 
@@ -99,38 +99,38 @@ query, _ := rsql.BuildQueryWithParams(db, p, User{})
 query.Find(&users)
 ```
 
-Each step is also available separately — `BuildQuery` (filter + joins), `ApplySort` (ORDER BY, nested supported), `ApplyPagination` (clamped LIMIT/OFFSET).
+Each step is also available separately: `BuildQuery` (filter + joins), `ApplySort` (ORDER BY, nested supported), `ApplyPagination` (clamped LIMIT/OFFSET).
 
 ## Query syntax
 
 Combined filters use the RSQL convention:
 
-| Token | Meaning            | Example                                   |
-|-------|--------------------|-------------------------------------------|
-| `;`   | AND                | `status==ACTIVE;price>=1000`             |
-| `,`   | OR                 | `status==ACTIVE,status==PENDING`         |
-| `(...)` | Grouping         | `status==ACTIVE;(price>1000,price<500)`  |
+| Token   | Meaning  | Example                                 |
+| ------- | -------- | --------------------------------------- |
+| `;`     | AND      | `status==ACTIVE;price>=1000`            |
+| `,`     | OR       | `status==ACTIVE,status==PENDING`        |
+| `(...)` | Grouping | `status==ACTIVE;(price>1000,price<500)` |
 
 ### Operators
 
-| Operator | SQL          | Example                                   |
-|----------|--------------|-------------------------------------------|
+| Operator | SQL                     | Example                                                            |
+| -------- | ----------------------- | ------------------------------------------------------------------ |
 | `==`     | `=`, `ILIKE`, `IS NULL` | `name==Laptop*` (wildcard `*` → `ILIKE`); `name==null` → `IS NULL` |
-| `!=`     | `<>`, `IS NOT NULL` | `status!=ACTIVE`; `name!=null` → `IS NOT NULL` |
-| `>`      | `>`          | `price>1000`                              |
-| `>=`     | `>=`         | `price>=1000`                             |
-| `<`      | `<`          | `price<1000`                              |
-| `<=`     | `<=`         | `price<=1000`                             |
-| `=in=`   | `IN`         | `status=in=(ACTIVE,PENDING)`             |
-| `=out=`  | `NOT IN`     | `status=out=(DELETED,ARCHIVED)`          |
+| `!=`     | `<>`, `IS NOT NULL`     | `status!=ACTIVE`; `name!=null` → `IS NOT NULL`                     |
+| `>`      | `>`                     | `price>1000`                                                       |
+| `>=`     | `>=`                    | `price>=1000`                                                      |
+| `<`      | `<`                     | `price<1000`                                                       |
+| `<=`     | `<=`                    | `price<=1000`                                                      |
+| `=in=`   | `IN`                    | `status=in=(ACTIVE,PENDING)`                                       |
+| `=out=`  | `NOT IN`                | `status=out=(DELETED,ARCHIVED)`                                    |
 
-`==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this — `name==*null*` is a regular `ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
+`==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this: `name==*null*` is a regular `ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
 
 ### Relations & joins
 
 Dot-separated selectors traverse struct relations. The builder resolves the GORM `foreignKey`/`references` tags and emits `LEFT JOIN`s automatically, using `__`-separated table aliases to avoid collisions.
 
-Each segment must match a **Go struct field name** (case-insensitive) — not the table name, and there is no singular/plural inflection. If the field is `Roles`, use `roles`; if it's `Role`, use `role`. A mismatch fails loudly, e.g. `field "role" not found on User in "role.name"`.
+Each segment must match a **Go struct field name** (case-insensitive), not the table name, and there is no singular/plural inflection. If the field is `Roles`, use `roles`; if it's `Role`, use `role`. A mismatch fails loudly, e.g. `field "role" not found on User in "role.name"`.
 
 ```go
 node, _ := rsql.Parse(`roles.role.name==operator`)
@@ -153,20 +153,20 @@ node, _ := rsql.Parse(`roles.RoleName!=operator`)
 
 ## API reference
 
-| Symbol                       | Description                                        |
-|------------------------------|----------------------------------------------------|
-| `Parse(input string)`        | Parse an RSQL string into a `Node` AST. `""` → `nil` |
-| `BuildQuery(db, node, model)`| Apply the AST to a `*gorm.DB` (validates + joins)   |
-| `ApplySort(db, sorts, model)`| Validate fields + apply `ORDER BY` (nested supported) |
-| `ApplyPagination(db, pagination)` | Apply clamped `LIMIT`/`OFFSET`                 |
-| `BuildQueryWithParams(db, params, model)` | Apply filter + sort + pagination in one call |
-| `BuildPageableQuery(db, params, model)` | Filter + sort + sanitized pagination; `NewQuery()` for Count and Find |
-| `ParseSort(raw string)`      | Parse `field:desc,field2:asc` into `[]Sort`         |
-| `ParseListParams(...)`       | Parse filter + sort + page + page size into `Params` |
-| `Params`                     | `{ Pagination, Filter Node, Sorts []Sort }`          |
-| `Pagination.Sanitize()`      | Clamp page/limit; returns `(page, limit, offset)`    |
-| `Node`                       | AST: `ComparisonNode`, `AndNode`, `OrNode`           |
-| `DefaultLimit` / `MaxLimit`  | Pagination bounds (`10` / `1000`)                    |
+| Symbol                                    | Description                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------- |
+| `Parse(input string)`                     | Parse an RSQL string into a `Node` AST. `""` → `nil`                  |
+| `BuildQuery(db, node, model)`             | Apply the AST to a `*gorm.DB` (validates + joins)                     |
+| `ApplySort(db, sorts, model)`             | Validate fields + apply `ORDER BY` (nested supported)                 |
+| `ApplyPagination(db, pagination)`         | Apply clamped `LIMIT`/`OFFSET`                                        |
+| `BuildQueryWithParams(db, params, model)` | Apply filter + sort + pagination in one call                          |
+| `BuildPageableQuery(db, params, model)`   | Filter + sort + sanitized pagination; `NewQuery()` for Count and Find |
+| `ParseSort(raw string)`                   | Parse `field:desc,field2:asc` into `[]Sort`                           |
+| `ParseListParams(...)`                    | Parse filter + sort + page + page size into `Params`                  |
+| `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
+| `Pagination.Sanitize()`                   | Clamp page/limit; returns `(page, limit, offset)`                     |
+| `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |
+| `DefaultLimit` / `MaxLimit`               | Pagination bounds (`10` / `1000`)                                     |
 
 `Parse` and `BuildQuery` are split deliberately: parse once, reuse the AST for multiple connections or cache it.
 
