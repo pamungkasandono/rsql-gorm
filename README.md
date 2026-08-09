@@ -113,16 +113,16 @@ Combined filters use the RSQL convention:
 
 ### Operators
 
-| Operator | SQL                     | Example                                                            |
-| -------- | ----------------------- | ------------------------------------------------------------------ |
-| `==`     | `=`, `ILIKE`, `IS NULL`     | `name==Laptop*` (wildcard `*` → `ILIKE`); `name==null` → `IS NULL` |
+| Operator | SQL                              | Example                                                                                      |
+| -------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| `==`     | `=`, `ILIKE`, `IS NULL`          | `name==Laptop*` (wildcard `*` → `ILIKE`); `name==null` → `IS NULL`                           |
 | `!=`     | `<>`, `NOT ILIKE`, `IS NOT NULL` | `name!=Laptop*` (wildcard `*` → `NOT ILIKE`); `status!=ACTIVE`; `name!=null` → `IS NOT NULL` |
-| `>`      | `>`                     | `price>1000`                                                       |
-| `>=`     | `>=`                    | `price>=1000`                                                      |
-| `<`      | `<`                     | `price<1000`                                                       |
-| `<=`     | `<=`                    | `price<=1000`                                                      |
-| `=in=`   | `IN`                    | `status=in=(ACTIVE,PENDING)`                                       |
-| `=out=`  | `NOT IN`                | `status=out=(DELETED,ARCHIVED)`                                    |
+| `>`      | `>`                              | `price>1000`                                                                                 |
+| `>=`     | `>=`                             | `price>=1000`                                                                                |
+| `<`      | `<`                              | `price<1000`                                                                                 |
+| `<=`     | `<=`                             | `price<=1000`                                                                                |
+| `=in=`   | `IN`                             | `status=in=(ACTIVE,PENDING)`                                                                 |
+| `=out=`  | `NOT IN`                         | `status=out=(DELETED,ARCHIVED)`                                                              |
 
 `==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this: `name==*null*` is a regular `ILIKE` search and `name!=*null*` a `NOT ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
 
@@ -161,14 +161,14 @@ node, _ := rsql.Parse(`roles.RoleName!=st*ff`)
 
 Filters are fully parameterized (`?` placeholders) and selectors are validated against the model, so values cannot escape into SQL. Input bounds exist so a hostile request cannot exhaust the database or the server:
 
-| Bound               | Value  | Enforced when                                   |
-| ------------------- | ------ | ----------------------------------------------- |
-| `MaxFilterLength`   | 8192   | `Parse` rejects filters longer than 8 KB        |
-| `MaxParenDepth`     | 100    | `Parse` rejects deeper `(...)` nesting          |
-| `MaxListValues`     | 2000   | `Parse` rejects `=in=`/`=out=` lists that large |
-| `MaxLimit`          | 1000   | `Pagination.Sanitize` clamps `limit`            |
-| `MaxPage`           | 10000  | `Pagination.Sanitize` clamps `page` (OFFSET)    |
-| Max join depth      | 5      | `BuildQuery` rejects deeper selectors           |
+| Bound             | Value | Enforced when                                   |
+| ----------------- | ----- | ----------------------------------------------- |
+| `MaxFilterLength` | 8192  | `Parse` rejects filters longer than 8 KB        |
+| `MaxParenDepth`   | 100   | `Parse` rejects deeper `(...)` nesting          |
+| `MaxListValues`   | 2000  | `Parse` rejects `=in=`/`=out=` lists that large |
+| `MaxLimit`        | 1000  | `Pagination.Sanitize` clamps `limit`            |
+| `MaxPage`         | 10000 | `Pagination.Sanitize` clamps `page` (OFFSET)    |
+| Max join depth    | 5     | `BuildQuery` rejects deeper selectors           |
 
 `BuildQuery` alone applies no `LIMIT`; prefer `BuildPageableQuery` / `BuildQueryWithParams` for request-facing endpoints so results are capped at `MaxLimit`.
 
@@ -187,7 +187,7 @@ Filters are fully parameterized (`?` placeholders) and selectors are validated a
 | `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
 | `Pagination.Sanitize()`                   | Clamp page/limit; returns `(page, limit, offset)`                     |
 | `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |
-| `DefaultLimit` / `MaxLimit` / `MaxPage` | Pagination bounds (`10` / `1000` / `10000`)                    |
+| `DefaultLimit` / `MaxLimit` / `MaxPage`   | Pagination bounds (`10` / `1000` / `10000`)                           |
 
 `Parse` and `BuildQuery` are split deliberately: parse once, reuse the AST for multiple connections or cache it.
 
