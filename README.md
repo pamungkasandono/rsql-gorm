@@ -1,5 +1,12 @@
 # rsql-gorm
 
+[![CI](https://github.com/pamungkasandono/rsql-gorm/actions/workflows/ci.yml/badge.svg)](https://github.com/pamungkasandono/rsql-gorm/actions)
+[![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/pamungkasandono/rsql-gorm)](https://goreportcard.com/report/github.com/pamungkasandono/rsql-gorm)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/pamungkasandono/rsql-gorm)](https://pkg.go.dev/github.com/pamungkasandono/rsql-gorm)
+[![Release](https://img.shields.io/github/v/release/pamungkasandono/rsql-gorm?sort=semver)](https://github.com/pamungkasandono/rsql-gorm/releases)
+[![License](https://img.shields.io/github/license/pamungkasandono/rsql-gorm)](https://github.com/pamungkasandono/rsql-gorm/blob/main/LICENSE)
+
 RQL-style (Resource Query Language) filter builder for [GORM](https://gorm.io). Parse a compact query string into GORM `Where` clauses with automatic joins for relations, without string concatenation or SQL injection.
 
 ## Install
