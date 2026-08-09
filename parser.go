@@ -6,15 +6,25 @@ import (
 	"unicode"
 )
 
+const (
+	MaxParenDepth    = 100
+	MaxFilterLength  = 8192
+	MaxListValues    = 2000
+)
+
 type parser struct {
 	input []rune
 	pos   int
+	depth int
 }
 
 func Parse(input string) (Node, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
 		return nil, nil
+	}
+	if len(trimmed) > MaxFilterLength {
+		return nil, fmt.Errorf("filter exceeds maximum length of %d bytes", MaxFilterLength)
 	}
 	p := &parser{input: []rune(trimmed), pos: 0}
 	node, err := p.parseOr()
@@ -77,6 +87,10 @@ func (p *parser) parseAnd() (Node, error) {
 func (p *parser) parsePrimary() (Node, error) {
 	p.skipWhitespace()
 	if p.match('(') {
+		p.depth++
+		if p.depth > MaxParenDepth {
+			return nil, fmt.Errorf("grouping depth %d exceeds maximum %d", p.depth, MaxParenDepth)
+		}
 		node, err := p.parseOr()
 		if err != nil {
 			return nil, err
@@ -85,6 +99,7 @@ func (p *parser) parsePrimary() (Node, error) {
 		if !p.match(')') {
 			return nil, fmt.Errorf("expected closing ')' at position %d", p.pos)
 		}
+		p.depth--
 		return node, nil
 	}
 	return p.parseComparison()
@@ -187,6 +202,9 @@ func (p *parser) parseListArguments() (any, error) {
 		val := p.readArgumentValue()
 		if val == "" && p.peek() != ')' {
 			return nil, fmt.Errorf("expected argument value at position %d", p.pos)
+		}
+		if len(values) == MaxListValues {
+			return nil, fmt.Errorf("argument list exceeds maximum of %d values", MaxListValues)
 		}
 		values = append(values, val)
 

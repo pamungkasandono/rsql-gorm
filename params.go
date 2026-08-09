@@ -16,6 +16,7 @@ type Pagination struct {
 const (
 	DefaultLimit = 10
 	MaxLimit     = 1000
+	MaxPage      = 10000
 )
 
 func (p Pagination) Sanitize() (page, limit, offset int) {
@@ -27,6 +28,9 @@ func (p Pagination) Sanitize() (page, limit, offset int) {
 	}
 	if p.Page < 1 {
 		p.Page = 1
+	}
+	if p.Page > MaxPage {
+		p.Page = MaxPage
 	}
 	return p.Page, p.Limit, (p.Page - 1) * p.Limit
 }

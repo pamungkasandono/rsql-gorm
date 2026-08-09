@@ -71,6 +71,7 @@ func TestPaginationSanitize(t *testing.T) {
 		{"defaults", 0, 0, 1, DefaultLimit, 0},
 		{"valid", 3, 20, 3, 20, 40},
 		{"over_max", 2, 99999, 2, MaxLimit, MaxLimit},
+		{"page_over_max", MaxPage + 1000, 20, MaxPage, 20, (MaxPage - 1) * 20},
 		{"negative", -1, -5, 1, DefaultLimit, 0},
 	}
 

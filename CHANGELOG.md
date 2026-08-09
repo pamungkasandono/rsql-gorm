@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (e.g. `Role.Name`) that resolve through the existing join machinery.
 - `ApplyPagination` to apply clamped `LIMIT`/`OFFSET` from a `Pagination`.
 - `BuildQueryWithParams` to apply filter, sort and pagination in a single call.
+- Input bounds to protect against resource-exhaustion (DoS) requests:
+  `MaxFilterLength` (8192 bytes) rejects oversized filters in `Parse`,
+  `MaxParenDepth` (100) rejects deeply nested grouping that could overflow the
+  parser stack, and `MaxListValues` (2000) caps `=in=`/`=out=` argument lists.
+  `MaxPage` (10000) clamps the pagination offset in `Pagination.Sanitize`.
+- DoS tests: deep parens, over-length filter, oversized argument list, and page
+  clamping, alongside the existing injection tests.
 
 ### Changed
 

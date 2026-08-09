@@ -157,6 +157,21 @@ node, _ := rsql.Parse(`roles.RoleName!=st*ff`)
 //   SELECT t0.user_id FROM user_roles t0 WHERE t0.role_name ILIKE 'st%ff' ESCAPE '\')
 ```
 
+## Limits & safety
+
+Filters are fully parameterized (`?` placeholders) and selectors are validated against the model, so values cannot escape into SQL. Input bounds exist so a hostile request cannot exhaust the database or the server:
+
+| Bound               | Value  | Enforced when                                   |
+| ------------------- | ------ | ----------------------------------------------- |
+| `MaxFilterLength`   | 8192   | `Parse` rejects filters longer than 8 KB        |
+| `MaxParenDepth`     | 100    | `Parse` rejects deeper `(...)` nesting          |
+| `MaxListValues`     | 2000   | `Parse` rejects `=in=`/`=out=` lists that large |
+| `MaxLimit`          | 1000   | `Pagination.Sanitize` clamps `limit`            |
+| `MaxPage`           | 10000  | `Pagination.Sanitize` clamps `page` (OFFSET)    |
+| Max join depth      | 5      | `BuildQuery` rejects deeper selectors           |
+
+`BuildQuery` alone applies no `LIMIT`; prefer `BuildPageableQuery` / `BuildQueryWithParams` for request-facing endpoints so results are capped at `MaxLimit`.
+
 ## API reference
 
 | Symbol                                    | Description                                                           |
@@ -172,7 +187,7 @@ node, _ := rsql.Parse(`roles.RoleName!=st*ff`)
 | `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
 | `Pagination.Sanitize()`                   | Clamp page/limit; returns `(page, limit, offset)`                     |
 | `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |
-| `DefaultLimit` / `MaxLimit`               | Pagination bounds (`10` / `1000`)                                     |
+| `DefaultLimit` / `MaxLimit` / `MaxPage` | Pagination bounds (`10` / `1000` / `10000`)                    |
 
 `Parse` and `BuildQuery` are split deliberately: parse once, reuse the AST for multiple connections or cache it.
 

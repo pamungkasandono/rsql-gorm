@@ -1,6 +1,7 @@
 package rsql
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -311,6 +312,41 @@ func TestParseWhitespace(t *testing.T) {
 				t.Errorf("unexpected error for %q: %v", input, err)
 			}
 		})
+	}
+}
+
+func TestParseMaxLength(t *testing.T) {
+	value := strings.Repeat("a", MaxFilterLength-len("name=="))
+	if _, err := Parse("name==" + value); err != nil {
+		t.Fatalf("filter at max length should parse: %v", err)
+	}
+	over := strings.Repeat("a", MaxFilterLength-len("name==")+1)
+	if _, err := Parse("name==" + over); err == nil {
+		t.Fatal("expected error for filter exceeding max length")
+	}
+}
+
+func TestParseMaxParenDepth(t *testing.T) {
+	nested := func(n int) string {
+		return strings.Repeat("(", n) + "name==x" + strings.Repeat(")", n)
+	}
+	if _, err := Parse(nested(MaxParenDepth)); err != nil {
+		t.Fatalf("paren depth %d should be accepted: %v", MaxParenDepth, err)
+	}
+	if _, err := Parse(nested(MaxParenDepth + 1)); err == nil {
+		t.Fatal("expected error for paren depth exceeding maximum")
+	}
+}
+
+func TestParseMaxListValues(t *testing.T) {
+	list := func(n int) string {
+		return "status=in=(" + strings.TrimSuffix(strings.Repeat("v,", n), ",") + ")"
+	}
+	if _, err := Parse(list(MaxListValues)); err != nil {
+		t.Fatalf("list of %d values should be accepted: %v", MaxListValues, err)
+	}
+	if _, err := Parse(list(MaxListValues + 1)); err == nil {
+		t.Fatal("expected error for list exceeding maximum values")
 	}
 }
 
