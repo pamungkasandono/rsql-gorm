@@ -1,0 +1,28 @@
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Test artifacts
+coverage.*
+*.prof
+
+# Dependency dirs
+/vendor/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Secrets
+.env
+.env.*
+
+# Session artifacts
+ses_*.json
