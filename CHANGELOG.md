@@ -33,6 +33,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `ParseListParams` now rejects non-numeric page and page size values with an
   error, instead of silently clamping them to the defaults.
+- Single-segment filter selectors are now validated against the root model
+  and rejected when the field is unknown (e.g. `x--==1`, `*==1`). Previously
+  they fell back to the raw selector as a column name, which could leak SQL
+  comment characters (`-`) or `*` into the generated query. Values remain
+  fully parameterized (`?` placeholders), with tests covering injection-style
+  payloads across `==`, `!=`, `=in=`, `=out=` and negated `has-many`
+  subqueries, plus creative SQL-semantics cases executed against a real
+  in-memory SQLite database: empty lists (`=out=()` returns the whole table,
+  `=in=()` matches nothing), three-valued NULL logic in `!=`/OR tautologies,
+  and `name!=*` (a `NOT ILIKE '%'` that effectively selects NULL rows).
 
 ### Added
 
