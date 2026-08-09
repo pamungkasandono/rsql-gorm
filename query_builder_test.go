@@ -10,10 +10,11 @@ import (
 )
 
 type qbUser struct {
-	ID    string       `gorm:"column:id;primaryKey"`
-	Name  string       `gorm:"column:name"`
-	Email string       `gorm:"column:email"`
-	Roles []qbUserRole `gorm:"foreignKey:UserID;references:ID"`
+	ID        string       `gorm:"column:id;primaryKey"`
+	Name      string       `gorm:"column:name"`
+	Email     string       `gorm:"column:email"`
+	CreatedAt string       `gorm:"column:created_at"`
+	Roles     []qbUserRole `gorm:"foreignKey:UserID;references:ID"`
 }
 
 func (qbUser) TableName() string { return "qb_users" }
@@ -201,7 +202,7 @@ func TestBuildQueryInOut(t *testing.T) {
 }
 
 func TestBuildQueryJoinHasMany(t *testing.T) {
-	_, sql, vars := buildQuery(t, "roles.role_name==staff", qbUser{}, &qbUser{})
+	_, sql, vars := buildQuery(t, "roles.RoleName==staff", qbUser{}, &qbUser{})
 
 	assertContains(t, sql, "LEFT JOIN qb_user_roles Roles ON Roles.user_id = qb_users.id")
 	assertContains(t, sql, "WHERE Roles.role_name = ?")
@@ -222,7 +223,7 @@ func TestBuildQueryJoinNested(t *testing.T) {
 }
 
 func TestBuildQueryNegatedHasMany(t *testing.T) {
-	_, sql, vars := buildQuery(t, "roles.role_name!=staff", qbUser{}, &qbUser{})
+	_, sql, vars := buildQuery(t, "roles.RoleName!=staff", qbUser{}, &qbUser{})
 
 	assertContains(t, sql, "qb_users.id NOT IN (SELECT t0.user_id FROM qb_user_roles t0 WHERE t0.role_name = ?)")
 	if len(vars) != 1 || vars[0] != "staff" {
@@ -231,7 +232,7 @@ func TestBuildQueryNegatedHasMany(t *testing.T) {
 }
 
 func TestBuildQueryNegatedHasManyIn(t *testing.T) {
-	_, sql, vars := buildQuery(t, "roles.role_name=out=(staff,admin)", qbUser{}, &qbUser{})
+	_, sql, vars := buildQuery(t, "roles.RoleName=out=(staff,admin)", qbUser{}, &qbUser{})
 
 	assertContains(t, sql, "qb_users.id NOT IN (SELECT t0.user_id FROM qb_user_roles t0 WHERE t0.role_name IN (?,?))")
 	if len(vars) != 2 || vars[0] != "staff" || vars[1] != "admin" {

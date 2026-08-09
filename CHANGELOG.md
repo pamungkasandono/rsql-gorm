@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `ApplySort` to apply validated `ORDER BY` clauses, including nested selectors
+  (e.g. `Role.Name`) that resolve through the existing join machinery.
+- `ApplyPagination` to apply clamped `LIMIT`/`OFFSET` from a `Pagination`.
+- `BuildQueryWithParams` to apply filter, sort and pagination in a single call.
+
+### Changed
+
+- `resolveSelector` now rejects selectors whose last segment is not a known
+  struct field, instead of silently falling back to the raw name. Query
+  builder and sort fields must reference Go struct field names; DB column
+  names are still derived from `gorm` tags.
+- `BuildQuery` extracted its model initialization into `newQueryBuilder`, now
+  shared with `ApplySort`.
+
 ## [0.1.0] - 2026-08-09
 
 ### Added

@@ -38,6 +38,23 @@ func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 		return db, nil
 	}
 
+	qb, err := newQueryBuilder(rootModel)
+	if err != nil {
+		return nil, err
+	}
+
+	v := &Validator{
+		rootModel:    qb.rootModel,
+		maxJoinDepth: qb.maxJoinDepth,
+	}
+	if err := v.Validate(node); err != nil {
+		return nil, err
+	}
+
+	return qb.build(db, node)
+}
+
+func newQueryBuilder(rootModel any) (*QueryBuilder, error) {
 	modelType := reflect.TypeOf(rootModel)
 	for modelType.Kind() == reflect.Ptr {
 		modelType = modelType.Elem()
@@ -51,23 +68,13 @@ func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 		return nil, fmt.Errorf("filter: root model must implement TableName()")
 	}
 
-	v := &Validator{
-		rootModel:    modelType,
-		maxJoinDepth: defaultMaxJoinDepth,
-	}
-	if err := v.Validate(node); err != nil {
-		return nil, err
-	}
-
-	qb := &QueryBuilder{
+	return &QueryBuilder{
 		rootModel:    modelType,
 		rootTable:    rootTable,
 		rootPK:       findPKColumn(modelType),
 		maxJoinDepth: defaultMaxJoinDepth,
 		joinSeen:     make(map[string]bool),
-	}
-
-	return qb.build(db, node)
+	}, nil
 }
 
 func (qb *QueryBuilder) build(db *gorm.DB, node Node) (*gorm.DB, error) {
@@ -231,10 +238,10 @@ func (qb *QueryBuilder) resolveSelector(segments []string) (*resolvedSelector, e
 
 	lastSeg := segments[depth]
 	lastField, found := findFieldByFold(currentType, lastSeg)
-	colName := lastSeg
-	if found {
-		colName = findColumnByField(currentType, lastField.Name)
+	if !found {
+		return nil, fmt.Errorf("field %q not found on %s in %q", lastSeg, typeName(currentType), strings.Join(segments, "."))
 	}
+	colName := findColumnByField(currentType, lastField.Name)
 
 	return &resolvedSelector{
 		alias:     parentAlias,
@@ -263,7 +270,9 @@ func (qb *QueryBuilder) negatedHasMany(resolved *resolvedSelector, n *Comparison
 
 	firstStep := resolved.steps[0]
 	subquery.WriteString("SELECT ")
-	subquery.WriteString("t0." + firstStep.fk + " FROM ")
+	subquery.WriteString("t0.")
+	subquery.WriteString(firstStep.fk)
+	subquery.WriteString(" FROM ")
 	subquery.WriteString(firstStep.table + " t0")
 
 	for i := 1; i < len(resolved.steps); i++ {
