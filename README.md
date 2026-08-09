@@ -115,8 +115,8 @@ Combined filters use the RSQL convention:
 
 | Operator | SQL                     | Example                                                            |
 | -------- | ----------------------- | ------------------------------------------------------------------ |
-| `==`     | `=`, `ILIKE`, `IS NULL` | `name==Laptop*` (wildcard `*` → `ILIKE`); `name==null` → `IS NULL` |
-| `!=`     | `<>`, `IS NOT NULL`     | `status!=ACTIVE`; `name!=null` → `IS NOT NULL`                     |
+| `==`     | `=`, `ILIKE`, `IS NULL`     | `name==Laptop*` (wildcard `*` → `ILIKE`); `name==null` → `IS NULL` |
+| `!=`     | `<>`, `NOT ILIKE`, `IS NOT NULL` | `name!=Laptop*` (wildcard `*` → `NOT ILIKE`); `status!=ACTIVE`; `name!=null` → `IS NOT NULL` |
 | `>`      | `>`                     | `price>1000`                                                       |
 | `>=`     | `>=`                    | `price>=1000`                                                      |
 | `<`      | `<`                     | `price<1000`                                                       |
@@ -124,9 +124,11 @@ Combined filters use the RSQL convention:
 | `=in=`   | `IN`                    | `status=in=(ACTIVE,PENDING)`                                       |
 | `=out=`  | `NOT IN`                | `status=out=(DELETED,ARCHIVED)`                                    |
 
-`==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this: `name==*null*` is a regular `ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
+`==null` / `!=null` (case-insensitive) map to `IS NULL` / `IS NOT NULL`. Wildcards disable this: `name==*null*` is a regular `ILIKE` search and `name!=*null*` a `NOT ILIKE` search. In `=in=` / `=out=`, `null` stays a string literal (matching the exact value `'null'`); use `==` / `!=` for null filtering.
 
 Wildcard `*` maps to SQL `%`. Use `\*` for a literal asterisk: `name==a\*b` searches for `a*b`, `name==a*b` searches for any value starting `a` and ending `b`. `%`, `_` and `\` are always literal in wildcard values: `name==*100%*` finds values containing `100%`, `name==*user_name*` values containing `user_name`, and `name==*.com\city\` matches the path `.com\city\`. A backslash escapes the next character, so `\\` is a literal backslash and `\\*` is a literal backslash followed by a wildcard: `name==*.com\city\\*` matches any value containing the path `.com\city\`. `\%` and `\_` are the same as their unescaped forms.
+
+The same rules apply to `!=`, which generates `NOT ILIKE ... ESCAPE '\'` instead of `<>` when the value contains a wildcard or escape sequence. In `=in=` / `=out=`, values stay literal.
 
 ILIKE patterns are emitted with an explicit `ESCAPE '\'` clause so the escaping above behaves the same across dialects instead of relying on the database's default escape character (PostgreSQL/MySQL default to `\`, SQLite has none).
 
@@ -147,12 +149,12 @@ WHERE Roles__Role.name = 'operator'
 ```
 
 - Max join depth is 5 (safe-guarded; configurable later).
-- `!=` and `=out=` on a `has-many` relation generate a `NOT IN (SELECT ...)` subquery instead of a naive join, so results are correct when the root has no matching children.
+- `!=` and `=out=` on a `has-many` relation generate a `NOT IN (SELECT ...)` subquery instead of a naive join, so results are correct when the root has no matching children. Wildcard values in `!=` are matched with `ILIKE` inside the subquery, and `!=null` with `IS NULL`.
 
 ```go
-node, _ := rsql.Parse(`roles.RoleName!=operator`)
+node, _ := rsql.Parse(`roles.RoleName!=st*ff`)
 // WHERE users.id NOT IN (
-//   SELECT t0.user_id FROM user_roles t0 WHERE t0.role_name = 'operator')
+//   SELECT t0.user_id FROM user_roles t0 WHERE t0.role_name ILIKE 'st%ff' ESCAPE '\')
 ```
 
 ## API reference

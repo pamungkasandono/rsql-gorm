@@ -310,6 +310,102 @@ func TestBuildQueryNotEqualNull(t *testing.T) {
 	}
 }
 
+func TestBuildQueryNotEqualWildcard(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name!=Jo*", "Jo%"},
+		{"name!=*n", "%n"},
+		{"name!=*ohn*", "%ohn%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name NOT ILIKE ? ESCAPE '\\'")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryNotEqualEscapedAsterisk(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name!=a\\*b", "a*b"},
+		{"name!=a\\*b*c", "a*b%c"},
+		{"name!=a\\b*c", "a\\\\b%c"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name NOT ILIKE ? ESCAPE '\\'")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryNotEqualPercentUnderscoreLiteral(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name!=*100%*", "%100\\%%"},
+		{"name!=*user_name*", "%user\\_name%"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name NOT ILIKE ? ESCAPE '\\'")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryNotEqualNullWildcardStillSearch(t *testing.T) {
+	tests := []struct {
+		input       string
+		wantPattern string
+	}{
+		{"name!=*null*", "%null%"},
+		{"name!=null*", "null%"},
+		{"name!=*null", "%null"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			_, sql, vars := buildQuery(t, tt.input, qbUser{}, &qbUser{})
+
+			assertContains(t, sql, "WHERE qb_users.name NOT ILIKE ? ESCAPE '\\'")
+			if len(vars) != 1 || vars[0] != tt.wantPattern {
+				t.Errorf("expected pattern %q, got %v", tt.wantPattern, vars)
+			}
+		})
+	}
+}
+
+func TestBuildQueryNotEqualPlainValueStaysUnequal(t *testing.T) {
+	_, sql, vars := buildQuery(t, "name!=ACTIVE", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "WHERE qb_users.name <> ?")
+	if len(vars) != 1 || vars[0] != "ACTIVE" {
+		t.Errorf("expected vars [ACTIVE], got %v", vars)
+	}
+}
+
 func TestBuildQueryNullWildcardStillSearch(t *testing.T) {
 	tests := []struct {
 		input       string
@@ -427,6 +523,24 @@ func TestBuildQueryNegatedHasManyIn(t *testing.T) {
 	assertContains(t, sql, "qb_users.id NOT IN (SELECT t0.user_id FROM qb_user_roles t0 WHERE t0.role_name IN (?,?))")
 	if len(vars) != 2 || vars[0] != "staff" || vars[1] != "admin" {
 		t.Errorf("expected vars [staff admin], got %v", vars)
+	}
+}
+
+func TestBuildQueryNegatedHasManyWildcard(t *testing.T) {
+	_, sql, vars := buildQuery(t, "roles.RoleName!=st*ff", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "qb_users.id NOT IN (SELECT t0.user_id FROM qb_user_roles t0 WHERE t0.role_name ILIKE ? ESCAPE '\\')")
+	if len(vars) != 1 || vars[0] != "st%ff" {
+		t.Errorf("expected vars [st%%ff], got %v", vars)
+	}
+}
+
+func TestBuildQueryNegatedHasManyNull(t *testing.T) {
+	_, sql, vars := buildQuery(t, "roles.RoleName!=null", qbUser{}, &qbUser{})
+
+	assertContains(t, sql, "qb_users.id NOT IN (SELECT t0.user_id FROM qb_user_roles t0 WHERE t0.role_name IS NULL)")
+	if len(vars) != 0 {
+		t.Errorf("expected no vars, got %v", vars)
 	}
 }
 

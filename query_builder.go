@@ -281,11 +281,10 @@ func (qb *QueryBuilder) negatedHasMany(resolved *resolvedSelector, n *Comparison
 		subquery.WriteString(fmt.Sprintf(" ON t%d.%s = t%d.%s", i, curr.ref, i-1, curr.fk))
 	}
 
-	subquery.WriteString(" WHERE t")
-	subquery.WriteString(fmt.Sprintf("%d", len(resolved.steps)-1))
-	subquery.WriteString(".")
-	subquery.WriteString(resolved.column)
+	innerCol := fmt.Sprintf("t%d.%s", len(resolved.steps)-1, resolved.column)
+	subquery.WriteString(" WHERE ")
 
+	var innerArgs []any
 	switch n.Operator {
 	case "=out=":
 		vals, ok := n.Arguments.([]string)
@@ -293,28 +292,28 @@ func (qb *QueryBuilder) negatedHasMany(resolved *resolvedSelector, n *Comparison
 			return "", nil, fmt.Errorf("=out= requires string list arguments")
 		}
 		placeholders := make([]string, len(vals))
-		for i := range vals {
+		innerArgs = make([]any, len(vals))
+		for i, v := range vals {
 			placeholders[i] = "?"
+			innerArgs[i] = v
 		}
+		subquery.WriteString(innerCol)
 		subquery.WriteString(" IN (" + strings.Join(placeholders, ",") + ")")
 	default:
-		subquery.WriteString(" = ?")
+		val, ok := n.Arguments.(string)
+		if !ok {
+			return "", nil, fmt.Errorf("!= requires string arguments")
+		}
+		clause, args, err := buildEquality(innerCol, val)
+		if err != nil {
+			return "", nil, err
+		}
+		subquery.WriteString(clause)
+		innerArgs = args
 	}
 
 	fullPK := qb.rootTable + "." + qb.rootPK
-
-	switch n.Operator {
-	case "=out=":
-		vals := n.Arguments.([]string)
-		args := make([]any, len(vals))
-		for i, v := range vals {
-			args[i] = v
-		}
-		return fmt.Sprintf("%s NOT IN (%s)", fullPK, subquery.String()), args, nil
-	default:
-		val := n.Arguments.(string)
-		return fmt.Sprintf("%s NOT IN (%s)", fullPK, subquery.String()), []any{val}, nil
-	}
+	return fmt.Sprintf("%s NOT IN (%s)", fullPK, subquery.String()), innerArgs, nil
 }
 
 // -- reflection helpers --
@@ -490,10 +489,17 @@ func wildcardPattern(val string) string {
 }
 
 func buildNotEqual(column string, args any) (string, []any, error) {
-	if val, ok := args.(string); ok && isNullKeyword(val) {
+	val, ok := args.(string)
+	if !ok {
+		return column + " <> ?", []any{args}, nil
+	}
+	if needsPatternConversion(val) {
+		return column + " NOT ILIKE ? ESCAPE '\\'", []any{wildcardPattern(val)}, nil
+	}
+	if isNullKeyword(val) {
 		return column + " IS NOT NULL", nil, nil
 	}
-	return column + " <> ?", []any{args}, nil
+	return column + " <> ?", []any{val}, nil
 }
 
 // isNullKeyword reports whether a string value is exactly "null" (any case),

@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `!=` now maps wildcard values (containing `*`, `\%` or `\_`) to
+  `NOT ILIKE ... ESCAPE '\'` instead of `<>`, consistent with `==`. The
+  negated `has-many` `NOT IN (SELECT ...)` subquery applies the same pattern
+  matching and `IS NULL` handling on its inner predicate; the outer `NOT IN`
+  inverts it, so `roles.RoleName!=null` still excludes rows that match
+  `IS NULL`.
 - `resolveSelector` now rejects selectors whose last segment is not a known
   struct field, instead of silently falling back to the raw name. Query
   builder and sort fields must reference Go struct field names; DB column
