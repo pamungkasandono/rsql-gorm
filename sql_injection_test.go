@@ -12,7 +12,7 @@ import (
 // demonstrate that values stay parameterized (no string break-out) while the
 // SQL that RSQL generates can still produce surprising results through
 // operator semantics: empty IN lists, three-valued NULL logic, and ILIKE
-// patterns. None of these payloads are errors — they slip through RSQL
+// patterns. None of these payloads are errors: they slip through RSQL
 // because the syntax is valid, which is exactly why they need documenting.
 
 type injUser struct {
@@ -147,7 +147,7 @@ func TestSQLInjectionNotEqualExcludesNulls(t *testing.T) {
 }
 
 // TestSQLInjectionNegatedWildcardSQL documents that `name!=*` becomes
-// `NOT ILIKE '%'`, which excludes every non-null value — in practice it is a
+// `NOT ILIKE '%'`, which excludes every non-null value; in practice it is a
 // back-door for selecting rows whose column is NULL.
 func TestSQLInjectionNegatedWildcardSQL(t *testing.T) {
 	_, sql, vars := buildQuery(t, "name!=*", qbUser{}, &qbUser{})
@@ -159,7 +159,7 @@ func TestSQLInjectionNegatedWildcardSQL(t *testing.T) {
 }
 
 // TestSQLInjectionWildcardMatchesAllSQL documents that `name==*` becomes
-// `ILIKE '%'`, which matches every non-null value — a single character filter
+// `ILIKE '%'`, which matches every non-null value; a single character filter
 // that silently disables column-level restrictions.
 func TestSQLInjectionWildcardMatchesAllSQL(t *testing.T) {
 	_, sql, vars := buildQuery(t, "name==*", qbUser{}, &qbUser{})
