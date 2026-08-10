@@ -178,11 +178,11 @@ db, err := rsql.WithAliases(db, Product{},
     },
 )
 if err != nil {
-    // invalid path detected immediately fail-fast
+    // invalid path detected immediately: fail-fast
 }
 ```
 
-Once registered, the aliased `*gorm.DB` is used normally — every `BuildQuery`, `ApplySort`, `BuildQueryWithParams`, and `BuildPageableQuery` automatically resolves aliases from the same `*gorm.DB` handle. This means a single repository can register aliases for multiple root models:
+Once registered, the aliased `*gorm.DB` is used normally; every `BuildQuery`, `ApplySort`, `BuildQueryWithParams`, and `BuildPageableQuery` automatically resolves aliases from the same `*gorm.DB` handle. This means a single repository can register aliases for multiple root models:
 
 ```go
 db, err = rsql.WithAliases(db, Product{}, productAliases)
@@ -191,7 +191,7 @@ db, err = rsql.WithAliases(db, Category{}, categoryAliases)
 
 #### How aliases work
 
-When a selector is resolved, each alias key is compared **as a dot-separated prefix** of the selector. If the selector equals the key, or starts with `key + "."`, the matching prefix is replaced with the alias **value** the internal Go field path. The remainder of the selector is resolved normally through the GORM model.
+When a selector is resolved, each alias key is compared **as a dot-separated prefix** of the selector. If the selector equals the key, or starts with `key + "."`, the matching prefix is replaced with the alias **value**, the internal Go field path. The remainder of the selector is resolved normally through the GORM model.
 
 Longest-prefix wins when multiple aliases match:
 
@@ -202,7 +202,7 @@ Longest-prefix wins when multiple aliases match:
 | `brandLabel`             | `"brandLabel"→"Brand.Name"`                                | `Brand.Name` (leaf rename)    |
 | `name`                   | (any aliases)                                              | `name` (no match → unchanged) |
 
-Selectors without an alias match, or internal Go field paths used directly, are resolved as before. Aliases take no effect when registered on a different `*gorm.DB` instance — each `WithAliases` call stores the map in the GORM session.
+Selectors without an alias match, or internal Go field paths used directly, are resolved as before. Aliases take no effect when registered on a different `*gorm.DB` instance; each `WithAliases` call stores the map in the GORM session.
 
 #### Normal case: direct relation rename
 

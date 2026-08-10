@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   selector matches more than one. Alias configuration is **eagerly validated**
   against the GORM model so mapping errors are caught immediately at
   repository construction, not at query time.
-- `Aliases` type — `map[string]string` where keys are public filter names and
+- `Aliases` type: `map[string]string` where keys are public filter names and
   values are internal dot-separated Go field paths.
 - Transparent internal performance cache: root-model metadata (type, table
   name, primary key column) is resolved once per `reflect.Type` and reused
