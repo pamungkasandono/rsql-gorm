@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/pamungkasandono/rsql-gorm/actions/workflows/ci.yml/badge.svg)](https://github.com/pamungkasandono/rsql-gorm/actions)
 [![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pamungkasandono/rsql-gorm)](https://goreportcard.com/report/github.com/pamungkasandono/rsql-gorm)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/pamungkasandono/rsql-gorm)](https://pkg.go.dev/github.com/pamungkasandono/rsql-gorm)
 [![Release](https://img.shields.io/github/v/release/pamungkasandono/rsql-gorm?sort=semver)](https://github.com/pamungkasandono/rsql-gorm/releases)
 [![License](https://img.shields.io/github/license/pamungkasandono/rsql-gorm)](https://github.com/pamungkasandono/rsql-gorm/blob/main/LICENSE)
@@ -164,6 +163,96 @@ node, _ := rsql.Parse(`roles.RoleName!=st*ff`)
 //   SELECT t0.user_id FROM user_roles t0 WHERE t0.role_name ILIKE 'st%ff' ESCAPE '\')
 ```
 
+### Aliases
+
+RSQL aliases let frontend write filter selectors that match the **JSON response shape**, not the underlying database field names or join structure. Aliases are registered once per root model via `WithAliases` (typically at repository construction) and are **eagerly validated** against the model so typos surface immediately.
+
+```go
+db, err := rsql.WithAliases(db, Product{},
+    rsql.Aliases{
+        "brand":      "Brand",              // direct has-one relation
+        "categories": "Cats.Category",      // junction / multi-hop path
+        "category":   "Cats.Category",      // multiple aliases for one relation
+        "variants":   "Vars",               // direct has-many relation
+        "brandLabel": "Brand.Name",         // rename a leaf field
+    },
+)
+if err != nil {
+    // invalid path detected immediately fail-fast
+}
+```
+
+Once registered, the aliased `*gorm.DB` is used normally — every `BuildQuery`, `ApplySort`, `BuildQueryWithParams`, and `BuildPageableQuery` automatically resolves aliases from the same `*gorm.DB` handle. This means a single repository can register aliases for multiple root models:
+
+```go
+db, err = rsql.WithAliases(db, Product{}, productAliases)
+db, err = rsql.WithAliases(db, Category{}, categoryAliases)
+```
+
+#### How aliases work
+
+When a selector is resolved, each alias key is compared **as a dot-separated prefix** of the selector. If the selector equals the key, or starts with `key + "."`, the matching prefix is replaced with the alias **value** the internal Go field path. The remainder of the selector is resolved normally through the GORM model.
+
+Longest-prefix wins when multiple aliases match:
+
+| Selector                 | Aliases                                                    | Resolved to                   |
+| ------------------------ | ---------------------------------------------------------- | ----------------------------- |
+| `categories.name`        | `"categories"→"Cats.Category"`                             | `Cats.Category.name`          |
+| `categories.parent.name` | `"categories"→"Cats"`, `"categories.parent"→"Cats.Parent"` | `Cats.Parent.name` (longer)   |
+| `brandLabel`             | `"brandLabel"→"Brand.Name"`                                | `Brand.Name` (leaf rename)    |
+| `name`                   | (any aliases)                                              | `name` (no match → unchanged) |
+
+Selectors without an alias match, or internal Go field paths used directly, are resolved as before. Aliases take no effect when registered on a different `*gorm.DB` instance — each `WithAliases` call stores the map in the GORM session.
+
+#### Normal case: direct relation rename
+
+JSON response `brand.name`, Go field `Brand`:
+
+```go
+rsql.Aliases{"brand": "Brand"}
+// filter: brand.name==Apple  →  SQL: ... Brand.name = ?
+// sort:  brand.name:asc      →  SQL: ORDER BY Brand.name ASC
+```
+
+#### Junction / multi-hop path
+
+JSON response `categories.name`, DB uses junction table `product_categories` → `categories`:
+
+```go
+rsql.Aliases{"categories": "Cats.Category"}
+// filter: categories.name==Laptop  →  LEFT JOIN product_categories Cats ...
+//                                      LEFT JOIN categories Cats__Category ...
+//                                      WHERE Cats__Category.name = ?
+```
+
+The alias value `Cats.Category` tells RSQL to walk **two** relation steps. The final field (`name`) is resolved inside the target struct (`Category`).
+
+#### Multiple aliases for one relation
+
+```go
+rsql.Aliases{"categories": "Cats.Category", "category": "Cats.Category"}
+// categories.name==A  and  category.name==A  both work
+```
+
+#### Leaf rename
+
+```go
+rsql.Aliases{"brandLabel": "Brand.Name"}
+// filter: brandLabel==Apple  →  LEFT JOIN brands Brand ... WHERE Brand.name = ?
+```
+
+#### Negated has-many
+
+Aliases don't change the SQL generation semantics: `!=` and `=out=` on a **direct** has-many relation still produce the `NOT IN (SELECT …)` subquery automatically. When the alias target path ends with a has-one or scalar field (e.g. `Cats.Category` where `Category` is has-one), the comparison stays as a normal `!=` / `NOT IN` on the joined column, which is the correct behaviour.
+
+#### Validation
+
+`WithAliases` validates the root model (must be a struct with `TableName()`) and every alias value path against that model. Errors include the offending alias key and the specific field that couldn't be found, so configuration problems are caught before any request runs.
+
+```text
+alias "categories": field "Categoryz" not found on aliasProduct
+```
+
 ## Limits & safety
 
 Filters are fully parameterized (`?` placeholders) and selectors are validated against the model, so values cannot escape into SQL. Input bounds exist so a hostile request cannot exhaust the database or the server:
@@ -191,6 +280,8 @@ Filters are fully parameterized (`?` placeholders) and selectors are validated a
 | `BuildPageableQuery(db, params, model)`   | Filter + sort + sanitized pagination; `NewQuery()` for Count and Find |
 | `ParseSort(raw string)`                   | Parse `field:desc,field2:asc` into `[]Sort`                           |
 | `ParseListParams(...)`                    | Parse filter + sort + page + page size into `Params`                  |
+| `WithAliases(db, model, aliases)`         | Register aliases against a model for the `*gorm.DB` (eager-validated) |
+| `Aliases`                                 | `map[string]string` public path → internal Go field path            |
 | `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
 | `Pagination.Sanitize()`                   | Clamp page/limit; returns `(page, limit, offset)`                     |
 | `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |

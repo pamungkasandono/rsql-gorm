@@ -9,6 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `WithAliases(db, model, aliases)` to register public→internal field path
+  mappings on a `*gorm.DB` instance. Aliases let frontend filter writers use
+  the JSON response shape (e.g. `categories.name==Laptop`) while the library
+  internally resolves junction tables and joined paths
+  (e.g. `Cats.Category.name`). One model can have multiple aliases per
+  relation; longest-dot-segment-prefix decides which alias applies when a
+  selector matches more than one. Alias configuration is **eagerly validated**
+  against the GORM model so mapping errors are caught immediately at
+  repository construction, not at query time.
+- `Aliases` type — `map[string]string` where keys are public filter names and
+  values are internal dot-separated Go field paths.
+- Transparent internal performance cache: root-model metadata (type, table
+  name, primary key column) is resolved once per `reflect.Type` and reused
+  across requests. All existing query functions (`BuildQuery`, `ApplySort`,
+  `BuildQueryWithParams`, `BuildPageableQuery`) benefit from the same cache
+  without API changes.
 - MIT `LICENSE` and license badge on the README.
 
 ## [0.2.0] - 2026-08-10
