@@ -4,9 +4,18 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 
 	"gorm.io/gorm"
 )
+
+type rootModelInfo struct {
+	rootModel reflect.Type
+	rootTable string
+	rootPK    string
+}
+
+var rootInfoCache sync.Map
 
 type QueryBuilder struct {
 	rootModel    reflect.Type
@@ -38,6 +47,12 @@ func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 		return db, nil
 	}
 
+	aliases := aliasesFor(db, rootModel)
+	rewritten, err := rewriteNode(node, aliases)
+	if err != nil {
+		return nil, err
+	}
+
 	qb, err := newQueryBuilder(rootModel)
 	if err != nil {
 		return nil, err
@@ -47,11 +62,11 @@ func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 		rootModel:    qb.rootModel,
 		maxJoinDepth: qb.maxJoinDepth,
 	}
-	if err := v.Validate(node); err != nil {
+	if err := v.Validate(rewritten); err != nil {
 		return nil, err
 	}
 
-	return qb.build(db, node)
+	return qb.build(db, rewritten)
 }
 
 func newQueryBuilder(rootModel any) (*QueryBuilder, error) {
@@ -63,15 +78,26 @@ func newQueryBuilder(rootModel any) (*QueryBuilder, error) {
 		return nil, fmt.Errorf("filter: root model must be a struct, got %s", modelType.Kind())
 	}
 
-	rootTable := tableNameOf(rootModel)
-	if rootTable == "" {
-		return nil, fmt.Errorf("filter: root model must implement TableName()")
+	var info *rootModelInfo
+	if v, ok := rootInfoCache.Load(modelType); ok {
+		info = v.(*rootModelInfo)
+	} else {
+		rootTable := tableNameOf(rootModel)
+		if rootTable == "" {
+			return nil, fmt.Errorf("filter: root model must implement TableName()")
+		}
+		info = &rootModelInfo{
+			rootModel: modelType,
+			rootTable: rootTable,
+			rootPK:    findPKColumn(modelType),
+		}
+		rootInfoCache.Store(modelType, info)
 	}
 
 	return &QueryBuilder{
-		rootModel:    modelType,
-		rootTable:    rootTable,
-		rootPK:       findPKColumn(modelType),
+		rootModel:    info.rootModel,
+		rootTable:    info.rootTable,
+		rootPK:       info.rootPK,
 		maxJoinDepth: defaultMaxJoinDepth,
 		joinSeen:     make(map[string]bool),
 	}, nil

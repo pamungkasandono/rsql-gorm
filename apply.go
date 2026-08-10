@@ -23,8 +23,14 @@ func ApplySort(db *gorm.DB, sorts []Sort, model any) (*gorm.DB, error) {
 		return nil, err
 	}
 
+	aliases := aliasesFor(db, model)
+
 	for _, s := range sorts {
-		column, steps, err := qb.resolveSortSelector(s.Field)
+		field, err := resolveAliases(s.Field, aliases)
+		if err != nil {
+			return nil, fmt.Errorf("sort: %w", err)
+		}
+		column, steps, err := qb.resolveSortSelector(field)
 		if err != nil {
 			return nil, err
 		}
