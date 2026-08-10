@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/pamungkasandono/rsql-gorm/actions/workflows/ci.yml/badge.svg)](https://github.com/pamungkasandono/rsql-gorm/actions)
 [![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?logo=go&logoColor=white)](https://go.dev/dl/)
-[![Go Report Card](https://goreportcard.com/badge/github.com/pamungkasandono/rsql-gorm)](https://goreportcard.com/report/github.com/pamungkasandono/rsql-gorm)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/pamungkasandono/rsql-gorm)](https://pkg.go.dev/github.com/pamungkasandono/rsql-gorm)
 [![Release](https://img.shields.io/github/v/release/pamungkasandono/rsql-gorm?sort=semver)](https://github.com/pamungkasandono/rsql-gorm/releases)
 [![License](https://img.shields.io/github/license/pamungkasandono/rsql-gorm)](https://github.com/pamungkasandono/rsql-gorm/blob/main/LICENSE)
@@ -166,7 +165,7 @@ node, _ := rsql.Parse(`roles.RoleName!=st*ff`)
 
 ### Aliases
 
-RSQL aliases let frontend write filter selectors that match the **JSON response shape** — not the underlying database field names or join structure. Aliases are registered once per root model via `WithAliases` (typically at repository construction) and are **eagerly validated** against the model so typos surface immediately.
+RSQL aliases let frontend write filter selectors that match the **JSON response shape**, not the underlying database field names or join structure. Aliases are registered once per root model via `WithAliases` (typically at repository construction) and are **eagerly validated** against the model so typos surface immediately.
 
 ```go
 db, err := rsql.WithAliases(db, Product{},
@@ -179,7 +178,7 @@ db, err := rsql.WithAliases(db, Product{},
     },
 )
 if err != nil {
-    // invalid path detected immediately — fail-fast
+    // invalid path detected immediately fail-fast
 }
 ```
 
@@ -192,16 +191,16 @@ db, err = rsql.WithAliases(db, Category{}, categoryAliases)
 
 #### How aliases work
 
-When a selector is resolved, each alias key is compared **as a dot-separated prefix** of the selector. If the selector equals the key, or starts with `key + "."`, the matching prefix is replaced with the alias **value** — the internal Go field path. The remainder of the selector is resolved normally through the GORM model.
+When a selector is resolved, each alias key is compared **as a dot-separated prefix** of the selector. If the selector equals the key, or starts with `key + "."`, the matching prefix is replaced with the alias **value** the internal Go field path. The remainder of the selector is resolved normally through the GORM model.
 
 Longest-prefix wins when multiple aliases match:
 
-| Selector | Aliases | Resolved to |
-|---|---|---|
-| `categories.name` | `"categories"→"Cats.Category"` | `Cats.Category.name` |
-| `categories.parent.name` | `"categories"→"Cats"`, `"categories.parent"→"Cats.Parent"` | `Cats.Parent.name` (longer) |
-| `brandLabel` | `"brandLabel"→"Brand.Name"` | `Brand.Name` (leaf rename) |
-| `name` | (any aliases) | `name` (no match → unchanged) |
+| Selector                 | Aliases                                                    | Resolved to                   |
+| ------------------------ | ---------------------------------------------------------- | ----------------------------- |
+| `categories.name`        | `"categories"→"Cats.Category"`                             | `Cats.Category.name`          |
+| `categories.parent.name` | `"categories"→"Cats"`, `"categories.parent"→"Cats.Parent"` | `Cats.Parent.name` (longer)   |
+| `brandLabel`             | `"brandLabel"→"Brand.Name"`                                | `Brand.Name` (leaf rename)    |
+| `name`                   | (any aliases)                                              | `name` (no match → unchanged) |
 
 Selectors without an alias match, or internal Go field paths used directly, are resolved as before. Aliases take no effect when registered on a different `*gorm.DB` instance — each `WithAliases` call stores the map in the GORM session.
 
@@ -244,7 +243,7 @@ rsql.Aliases{"brandLabel": "Brand.Name"}
 
 #### Negated has-many
 
-Aliases don't change the SQL generation semantics: `!=` and `=out=` on a **direct** has-many relation still produce the `NOT IN (SELECT …)` subquery automatically. When the alias target path ends with a has-one or scalar field (e.g. `Cats.Category` where `Category` is has-one), the comparison stays as a normal `!=` / `NOT IN` on the joined column — which is the correct behaviour.
+Aliases don't change the SQL generation semantics: `!=` and `=out=` on a **direct** has-many relation still produce the `NOT IN (SELECT …)` subquery automatically. When the alias target path ends with a has-one or scalar field (e.g. `Cats.Category` where `Category` is has-one), the comparison stays as a normal `!=` / `NOT IN` on the joined column, which is the correct behaviour.
 
 #### Validation
 
@@ -282,7 +281,7 @@ Filters are fully parameterized (`?` placeholders) and selectors are validated a
 | `ParseSort(raw string)`                   | Parse `field:desc,field2:asc` into `[]Sort`                           |
 | `ParseListParams(...)`                    | Parse filter + sort + page + page size into `Params`                  |
 | `WithAliases(db, model, aliases)`         | Register aliases against a model for the `*gorm.DB` (eager-validated) |
-| `Aliases`                                 | `map[string]string` — public path → internal Go field path            |
+| `Aliases`                                 | `map[string]string` public path → internal Go field path            |
 | `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
 | `Pagination.Sanitize()`                   | Clamp page/limit; returns `(page, limit, offset)`                     |
 | `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |
