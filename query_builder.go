@@ -45,7 +45,7 @@ type relStep struct {
 // BuildQuery validates node against rootModel and applies the resulting WHERE
 // clauses and LEFT JOINs to db. It applies no LIMIT; prefer
 // BuildPageableQuery or BuildQueryWithParams for request-facing endpoints so
-// results are capped at MaxLimit.
+// results are capped at the configured max limit.
 func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 	if node == nil {
 		return db, nil

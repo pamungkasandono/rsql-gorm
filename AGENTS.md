@@ -20,7 +20,7 @@ RSQL-style filter builder for GORM. Single Go package `rsql` at the repo root (m
 - `validator.go`: validates selectors against the model, enforces `defaultMaxJoinDepth` = 5.
 - `query_builder.go`: builds joins + WHERE clauses; also all operator/wildcard logic. `rootInfoCache` (`sync.Map`) caches root model metadata per `reflect.Type`.
 - `apply.go`: `ApplySort`, `ApplyPagination`, `BuildPageableQuery`/`PagedQuery`, `BuildQueryWithParams`.
-- `params.go` / `list_params.go`: pagination (`DefaultLimit` 10, `MaxLimit` 1000, `MaxPage` 10000) and HTTP-param parsing.
+- `params.go` / `list_params.go`: pagination and HTTP-param parsing. Pagination bounds live in `PaginationConfig` (defaults 10/1000/10000), stored in an `atomic.Pointer` and overridable via `SetPaginationConfig`; `sanitize` reads the effective config. `currentConfig()` is the internal hot-path accessor.
 - `alias.go`: `WithAliases` stores public→internal field-path maps in the GORM session via `db.Set(aliasKey(rootType), ...)`; scoped per `*gorm.DB` instance, not global.
 
 ## Conventions & gotchas
@@ -39,4 +39,4 @@ RSQL-style filter builder for GORM. Single Go package `rsql` at the repo root (m
 
 ## API surface (do not break)
 
-`Parse`, `BuildQuery`, `ApplySort`, `ApplyPagination`, `BuildQueryWithParams`, `BuildPageableQuery`, `ParseSort`, `ParseListParams`, `WithAliases`, `Aliases`, `Params`, `PagedQuery`, `Node` types, and `DefaultLimit`/`MaxLimit`/`MaxPage` are public and referenced in the README API table.
+`Parse`, `BuildQuery`, `ApplySort`, `ApplyPagination`, `BuildQueryWithParams`, `BuildPageableQuery`, `ParseSort`, `ParseListParams`, `WithAliases`, `Aliases`, `Params`, `PagedQuery`, `Node` types, and `PaginationConfig`/`SetPaginationConfig`/`CurrentPaginationConfig` are public and referenced in the README API table.

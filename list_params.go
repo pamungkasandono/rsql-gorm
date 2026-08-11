@@ -28,7 +28,7 @@ func ParseListParams(filter, sort, pageStr, pageSizeStr string) (*Params, error)
 	if err != nil {
 		return nil, err
 	}
-	p.Pagination.Limit, err = parseNumericParam(pageSizeStr, "page size", DefaultLimit)
+	p.Pagination.Limit, err = parseNumericParam(pageSizeStr, "page size", currentConfig().DefaultLimit)
 	if err != nil {
 		return nil, err
 	}

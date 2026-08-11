@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `BuildQuery`, `Aliases`, `WithAliases`, `Params`, `Pagination`, `Sort`,
   `ParseSort`, `ParseListParams`).
 
+### Added
+
+- `PaginationConfig`, `SetPaginationConfig` and `CurrentPaginationConfig` make
+  the pagination bounds configurable process-wide at runtime (e.g. from
+  environment variables). Defaults unchanged: default limit 10, max limit
+  1000, max page 10000.
+
+### Removed
+
+- The `DefaultLimit`, `MaxLimit` and `MaxPage` constants are removed; use
+  `DefaultPaginationConfig` for the built-in values or read/write
+  `PaginationConfig` via the setter/getter above.
+
 ## [0.3.0] - 2026-08-10
 
 ### Added

@@ -257,16 +257,19 @@ alias "categories": field "Categoryz" not found on aliasProduct
 
 Filters are fully parameterized (`?` placeholders) and selectors are validated against the model, so values cannot escape into SQL. Input bounds exist so a hostile request cannot exhaust the database or the server:
 
-| Bound          | Value | Enforced when                                   |
-| -------------- | ----- | ----------------------------------------------- |
-| Filter length  | 8192  | `Parse` rejects filters longer than 8 KB        |
-| Paren depth    | 100   | `Parse` rejects deeper `(...)` nesting          |
-| List values    | 2000  | `Parse` rejects `=in=`/`=out=` lists that large |
-| `MaxLimit`     | 1000  | `BuildPageableQuery` clamps `limit`             |
-| `MaxPage`      | 10000 | `BuildPageableQuery` clamps `page` (OFFSET)     |
-| Max join depth | 5     | `BuildQuery` rejects deeper selectors           |
+| Bound          | Value  | Enforced when                                   |
+| -------------- | ------ | ----------------------------------------------- |
+| Filter length  | 8192   | `Parse` rejects filters longer than 8 KB        |
+| Paren depth    | 100    | `Parse` rejects deeper `(...)` nesting          |
+| List values    | 2000   | `Parse` rejects `=in=`/`=out=` lists that large |
+| Max limit      | 1000   | `BuildPageableQuery` clamps `limit`             |
+| Max page       | 10000  | `BuildPageableQuery` clamps `page` (OFFSET)     |
+| Max join depth | 5      | `BuildQuery` rejects deeper selectors           |
 
-`BuildQuery` alone applies no `LIMIT`; prefer `BuildPageableQuery` / `BuildQueryWithParams` for request-facing endpoints so results are capped at `MaxLimit`.
+The filter bounds are fixed. The pagination bounds (max limit, max page and the
+default page size) are configurable at runtime; see [Configuration](#configuration).
+
+`BuildQuery` alone applies no `LIMIT`; prefer `BuildPageableQuery` / `BuildQueryWithParams` for request-facing endpoints so results are capped at the configured max limit.
 
 ## API reference
 
@@ -284,9 +287,35 @@ Filters are fully parameterized (`?` placeholders) and selectors are validated a
 | `Aliases`                                 | `map[string]string` public path → internal Go field path              |
 | `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
 | `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |
-| `DefaultLimit` / `MaxLimit` / `MaxPage`   | Pagination bounds (`10` / `1000` / `10000`)                           |
+| `PaginationConfig`                        | `{ DefaultLimit, MaxLimit, MaxPage }` bounds struct                   |
+| `SetPaginationConfig(cfg)`                | Replace the process-wide pagination bounds (validated)               |
+| `CurrentPaginationConfig()`               | Read the currently effective pagination bounds                       |
+| `DefaultPaginationConfig()`               | The built-in bounds (`10` / `1000` / `10000`)                        |
 
 `Parse` and `BuildQuery` are split deliberately: parse once, reuse the AST for multiple connections or cache it.
+
+## Configuration
+
+The pagination bounds are process-wide and configurable at runtime, e.g. from
+environment variables. Call `SetPaginationConfig` once at startup, before
+serving requests. It validates that `DefaultLimit >= 1`, `MaxLimit >=
+DefaultLimit` and `MaxPage >= 1`.
+
+```go
+cfg := rsql.DefaultPaginationConfig() // or rsql.CurrentPaginationConfig()
+if v, err := strconv.Atoi(os.Getenv("RSQL_DEFAULT_LIMIT")); err == nil {
+	cfg.DefaultLimit = v
+}
+if v, err := strconv.Atoi(os.Getenv("RSQL_MAX_LIMIT")); err == nil {
+	cfg.MaxLimit = v
+}
+if v, err := strconv.Atoi(os.Getenv("RSQL_MAX_PAGE")); err == nil {
+	cfg.MaxPage = v
+}
+if err := rsql.SetPaginationConfig(cfg); err != nil {
+	log.Fatal(err)
+}
+```
 
 ## Testing
 

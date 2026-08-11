@@ -158,8 +158,8 @@ func TestBuildPageableQueryClampsPagination(t *testing.T) {
 	if pq.Page != 1 {
 		t.Errorf("page: want 1, got %d", pq.Page)
 	}
-	if pq.Limit != MaxLimit {
-		t.Errorf("limit: want %d, got %d", MaxLimit, pq.Limit)
+	if pq.Limit != DefaultPaginationConfig().MaxLimit {
+		t.Errorf("limit: want %d, got %d", DefaultPaginationConfig().MaxLimit, pq.Limit)
 	}
 }
 

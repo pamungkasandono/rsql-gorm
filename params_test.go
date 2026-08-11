@@ -68,11 +68,11 @@ func TestPaginationSanitize(t *testing.T) {
 		wantLimit  int
 		wantOffset int
 	}{
-		{"defaults", 0, 0, 1, DefaultLimit, 0},
+		{"defaults", 0, 0, 1, DefaultPaginationConfig().DefaultLimit, 0},
 		{"valid", 3, 20, 3, 20, 40},
-		{"over_max", 2, 99999, 2, MaxLimit, MaxLimit},
-		{"page_over_max", MaxPage + 1000, 20, MaxPage, 20, (MaxPage - 1) * 20},
-		{"negative", -1, -5, 1, DefaultLimit, 0},
+		{"over_max", 2, 99999, 2, DefaultPaginationConfig().MaxLimit, DefaultPaginationConfig().MaxLimit},
+		{"page_over_max", DefaultPaginationConfig().MaxPage + 1000, 20, DefaultPaginationConfig().MaxPage, 20, (DefaultPaginationConfig().MaxPage - 1) * 20},
+		{"negative", -1, -5, 1, DefaultPaginationConfig().DefaultLimit, 0},
 	}
 
 	for _, tt := range tests {
@@ -113,7 +113,7 @@ func TestParseListParams(t *testing.T) {
 		t.Errorf("sorts wrong: %+v", p.Sorts)
 	}
 
-	if p.Pagination.Page != 1 || p.Pagination.Limit != DefaultLimit {
+	if p.Pagination.Page != 1 || p.Pagination.Limit != DefaultPaginationConfig().DefaultLimit {
 		t.Errorf("default pagination wrong: %+v", p.Pagination)
 	}
 }
@@ -156,5 +156,57 @@ func TestParseListParamsNegativePage(t *testing.T) {
 	_, err := ParseListParams("", "", "-2", "")
 	if err == nil {
 		t.Fatal("expected error for negative page")
+	}
+}
+
+func TestSetPaginationConfigEffective(t *testing.T) {
+	original := CurrentPaginationConfig()
+	defer SetPaginationConfig(original)
+
+	cfg := PaginationConfig{DefaultLimit: 5, MaxLimit: 50, MaxPage: 20}
+	if err := SetPaginationConfig(cfg); err != nil {
+		t.Fatalf("SetPaginationConfig: %v", err)
+	}
+
+	if got := CurrentPaginationConfig(); got != cfg {
+		t.Errorf("CurrentPaginationConfig: want %+v, got %+v", cfg, got)
+	}
+
+	page, limit, offset := (Pagination{Page: 0, Limit: 0}).sanitize()
+	if page != 1 || limit != 5 || offset != 0 {
+		t.Errorf("sanitize defaults: want 1/5/0, got %d/%d/%d", page, limit, offset)
+	}
+
+	page, limit, offset = (Pagination{Page: 3, Limit: 999}).sanitize()
+	if page != 3 || limit != 50 || offset != 100 {
+		t.Errorf("sanitize clamped: want 3/50/100, got %d/%d/%d", page, limit, offset)
+	}
+
+	p, err := ParseListParams("", "", "100", "")
+	if err != nil {
+		t.Fatalf("ParseListParams: %v", err)
+	}
+	if p.Pagination.Limit != 5 {
+		t.Errorf("ParseListParams default limit: want 5, got %d", p.Pagination.Limit)
+	}
+}
+
+func TestSetPaginationConfigValidation(t *testing.T) {
+	original := CurrentPaginationConfig()
+	defer SetPaginationConfig(original)
+
+	invalid := []PaginationConfig{
+		{DefaultLimit: 0, MaxLimit: 100, MaxPage: 100},
+		{DefaultLimit: 50, MaxLimit: 20, MaxPage: 100},
+		{DefaultLimit: 10, MaxLimit: 100, MaxPage: 0},
+	}
+	for _, cfg := range invalid {
+		if err := SetPaginationConfig(cfg); err == nil {
+			t.Errorf("SetPaginationConfig(%+v): expected error", cfg)
+		}
+	}
+
+	if got := CurrentPaginationConfig(); got != original {
+		t.Errorf("failed SetPaginationConfig must not change config: want %+v, got %+v", original, got)
 	}
 }
