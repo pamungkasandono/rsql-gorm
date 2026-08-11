@@ -8,19 +8,19 @@ import (
 
 const defaultMaxJoinDepth = 5
 
-type Validator struct {
+type validator struct {
 	rootModel    reflect.Type
 	maxJoinDepth int
 }
 
-func (v *Validator) Validate(node Node) error {
+func (v *validator) validate(node Node) error {
 	if node == nil {
 		return nil
 	}
 	return v.validateNode(node)
 }
 
-func (v *Validator) validateNode(node Node) error {
+func (v *validator) validateNode(node Node) error {
 	switch n := node.(type) {
 	case *ComparisonNode:
 		return v.validateSelector(n.Selector)
@@ -40,7 +40,7 @@ func (v *Validator) validateNode(node Node) error {
 	return nil
 }
 
-func (v *Validator) validateSelector(selector string) error {
+func (v *validator) validateSelector(selector string) error {
 	segments := strings.Split(selector, ".")
 
 	if len(segments) < 2 {

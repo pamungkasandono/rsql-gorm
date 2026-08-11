@@ -6,10 +6,15 @@ import (
 	"unicode"
 )
 
+// DoS input bounds enforced by Parse to protect the server from resource
+// exhaustion on hostile requests.
 const (
-	MaxParenDepth    = 100
-	MaxFilterLength  = 8192
-	MaxListValues    = 2000
+	// MaxParenDepth caps nested (...) grouping depth.
+	MaxParenDepth = 100
+	// MaxFilterLength caps the filter string length in bytes.
+	MaxFilterLength = 8192
+	// MaxListValues caps the number of values in =in=/=out= lists.
+	MaxListValues = 2000
 )
 
 type parser struct {
@@ -18,6 +23,10 @@ type parser struct {
 	depth int
 }
 
+// Parse parses an RSQL filter string into a Node AST. An empty or
+// whitespace-only string returns (nil, nil). Parse rejects input longer than
+// MaxFilterLength bytes, grouping nested deeper than MaxParenDepth, and
+// =in=/=out= lists larger than MaxListValues.
 func Parse(input string) (Node, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {

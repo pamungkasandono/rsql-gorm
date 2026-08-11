@@ -17,7 +17,7 @@ type rootModelInfo struct {
 
 var rootInfoCache sync.Map
 
-type QueryBuilder struct {
+type queryBuilder struct {
 	rootModel    reflect.Type
 	rootTable    string
 	rootPK       string
@@ -42,6 +42,10 @@ type relStep struct {
 	isHasMany bool
 }
 
+// BuildQuery validates node against rootModel and applies the resulting WHERE
+// clauses and LEFT JOINs to db. It applies no LIMIT; prefer
+// BuildPageableQuery or BuildQueryWithParams for request-facing endpoints so
+// results are capped at MaxLimit.
 func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 	if node == nil {
 		return db, nil
@@ -58,18 +62,18 @@ func BuildQuery(db *gorm.DB, node Node, rootModel any) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	v := &Validator{
+	v := &validator{
 		rootModel:    qb.rootModel,
 		maxJoinDepth: qb.maxJoinDepth,
 	}
-	if err := v.Validate(rewritten); err != nil {
+	if err := v.validate(rewritten); err != nil {
 		return nil, err
 	}
 
 	return qb.build(db, rewritten)
 }
 
-func newQueryBuilder(rootModel any) (*QueryBuilder, error) {
+func newQueryBuilder(rootModel any) (*queryBuilder, error) {
 	modelType := reflect.TypeOf(rootModel)
 	for modelType.Kind() == reflect.Ptr {
 		modelType = modelType.Elem()
@@ -94,7 +98,7 @@ func newQueryBuilder(rootModel any) (*QueryBuilder, error) {
 		rootInfoCache.Store(modelType, info)
 	}
 
-	return &QueryBuilder{
+	return &queryBuilder{
 		rootModel:    info.rootModel,
 		rootTable:    info.rootTable,
 		rootPK:       info.rootPK,
@@ -103,7 +107,7 @@ func newQueryBuilder(rootModel any) (*QueryBuilder, error) {
 	}, nil
 }
 
-func (qb *QueryBuilder) build(db *gorm.DB, node Node) (*gorm.DB, error) {
+func (qb *queryBuilder) build(db *gorm.DB, node Node) (*gorm.DB, error) {
 	clause, args, err := qb.buildClause(node)
 	if err != nil {
 		return nil, err
@@ -120,7 +124,7 @@ func (qb *QueryBuilder) build(db *gorm.DB, node Node) (*gorm.DB, error) {
 	return db, nil
 }
 
-func (qb *QueryBuilder) buildClause(node Node) (string, []any, error) {
+func (qb *queryBuilder) buildClause(node Node) (string, []any, error) {
 	switch n := node.(type) {
 	case *ComparisonNode:
 		return qb.buildComparison(n)
@@ -133,7 +137,7 @@ func (qb *QueryBuilder) buildClause(node Node) (string, []any, error) {
 	}
 }
 
-func (qb *QueryBuilder) combineChildren(children []Node, op string) (string, []any, error) {
+func (qb *queryBuilder) combineChildren(children []Node, op string) (string, []any, error) {
 	if len(children) == 0 {
 		return "", nil, nil
 	}
@@ -163,7 +167,7 @@ func (qb *QueryBuilder) combineChildren(children []Node, op string) (string, []a
 	return "(" + strings.Join(clauses, " "+op+" ") + ")", allArgs, nil
 }
 
-func (qb *QueryBuilder) buildComparison(n *ComparisonNode) (string, []any, error) {
+func (qb *queryBuilder) buildComparison(n *ComparisonNode) (string, []any, error) {
 	segments := strings.Split(n.Selector, ".")
 
 	if len(segments) == 1 {
@@ -185,7 +189,7 @@ func (qb *QueryBuilder) buildComparison(n *ComparisonNode) (string, []any, error
 	return buildOperatorClause(col, n.Operator, n.Arguments)
 }
 
-func (qb *QueryBuilder) resolveSelector(segments []string) (*resolvedSelector, error) {
+func (qb *queryBuilder) resolveSelector(segments []string) (*resolvedSelector, error) {
 	depth := len(segments) - 1
 
 	if depth > qb.maxJoinDepth {
@@ -277,7 +281,7 @@ func (qb *QueryBuilder) resolveSelector(segments []string) (*resolvedSelector, e
 	}, nil
 }
 
-func (qb *QueryBuilder) addJoins(steps []relStep) {
+func (qb *queryBuilder) addJoins(steps []relStep) {
 	for _, s := range steps {
 		if !qb.joinSeen[s.alias] {
 			qb.joinSeen[s.alias] = true
@@ -286,7 +290,7 @@ func (qb *QueryBuilder) addJoins(steps []relStep) {
 	}
 }
 
-func (qb *QueryBuilder) negatedHasMany(resolved *resolvedSelector, n *ComparisonNode) (string, []any, error) {
+func (qb *queryBuilder) negatedHasMany(resolved *resolvedSelector, n *ComparisonNode) (string, []any, error) {
 	if len(resolved.steps) == 0 {
 		col := resolved.alias + "." + resolved.column
 		return buildOperatorClause(col, n.Operator, n.Arguments)

@@ -50,7 +50,7 @@ func ApplySort(db *gorm.DB, sorts []Sort, model any) (*gorm.DB, error) {
 	return db, nil
 }
 
-func (qb *QueryBuilder) resolveSortSelector(selector string) (string, []relStep, error) {
+func (qb *queryBuilder) resolveSortSelector(selector string) (string, []relStep, error) {
 	segments := strings.Split(selector, ".")
 
 	if len(segments) == 1 {

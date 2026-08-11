@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `QueryBuilder` and `Validator` are now unexported internal types. They were
+  not part of the documented API and had no exported members users could call.
+- Added Go doc comments to the public API surface (`Parse`, AST node types,
+  `BuildQuery`, `Aliases`, `WithAliases`, `Params`, `Pagination`,
+  `Pagination.Sanitize`, `Sort`, `ParseSort`, `ParseListParams`, and the bounds
+  constants).
+
 ## [0.3.0] - 2026-08-10
 
 ### Added

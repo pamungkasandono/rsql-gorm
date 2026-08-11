@@ -8,8 +8,18 @@ import (
 	"gorm.io/gorm"
 )
 
+// Aliases maps public filter names to internal dot-separated Go field paths,
+// e.g. "categories" -> "Cats.Category". Keys are matched as case-sensitive
+// dot-prefixes of a selector; values are validated case-insensitively against
+// the model.
 type Aliases map[string]string
 
+// WithAliases registers aliases for model on db, returning a *gorm.DB that
+// resolves aliases in every BuildQuery, ApplySort, BuildQueryWithParams and
+// BuildPageableQuery call. The model and every alias value are validated
+// eagerly so mapping errors surface immediately, not at query time. Aliases
+// are scoped to this *gorm.DB instance via the GORM session; other instances
+// are unaffected.
 func WithAliases(db *gorm.DB, model any, aliases Aliases) (*gorm.DB, error) {
 	if err := validateRootModel(model); err != nil {
 		return nil, err
