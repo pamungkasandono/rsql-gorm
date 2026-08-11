@@ -12,14 +12,14 @@ type Params struct {
 	Sorts      []Sort
 }
 
-// Pagination holds the requested page and page size. Sanitize clamps them to
+// Pagination holds the requested page and page size. sanitize clamps them to
 // the DefaultLimit/MaxLimit and MaxPage bounds before use.
 type Pagination struct {
 	Page  int
 	Limit int
 }
 
-// Pagination bounds enforced by Pagination.Sanitize.
+// Pagination bounds enforced by Pagination.sanitize.
 const (
 	// DefaultLimit is used when Limit is unset or below 1.
 	DefaultLimit = 10
@@ -29,9 +29,9 @@ const (
 	MaxPage = 10000
 )
 
-// Sanitize clamps page and limit to the DefaultLimit/MaxLimit/MaxPage bounds
+// sanitize clamps page and limit to the DefaultLimit/MaxLimit/MaxPage bounds
 // and returns the effective page, limit and offset.
-func (p Pagination) Sanitize() (page, limit, offset int) {
+func (p Pagination) sanitize() (page, limit, offset int) {
 	if p.Limit < 1 {
 		p.Limit = DefaultLimit
 	}

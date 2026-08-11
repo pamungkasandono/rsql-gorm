@@ -9,12 +9,12 @@ import (
 // DoS input bounds enforced by Parse to protect the server from resource
 // exhaustion on hostile requests.
 const (
-	// MaxParenDepth caps nested (...) grouping depth.
-	MaxParenDepth = 100
-	// MaxFilterLength caps the filter string length in bytes.
-	MaxFilterLength = 8192
-	// MaxListValues caps the number of values in =in=/=out= lists.
-	MaxListValues = 2000
+	// maxParenDepth caps nested (...) grouping depth.
+	maxParenDepth = 100
+	// maxFilterLength caps the filter string length in bytes.
+	maxFilterLength = 8192
+	// maxListValues caps the number of values in =in=/=out= lists.
+	maxListValues = 2000
 )
 
 type parser struct {
@@ -25,15 +25,15 @@ type parser struct {
 
 // Parse parses an RSQL filter string into a Node AST. An empty or
 // whitespace-only string returns (nil, nil). Parse rejects input longer than
-// MaxFilterLength bytes, grouping nested deeper than MaxParenDepth, and
-// =in=/=out= lists larger than MaxListValues.
+// maxFilterLength bytes, grouping nested deeper than maxParenDepth, and
+// =in=/=out= lists larger than maxListValues.
 func Parse(input string) (Node, error) {
 	trimmed := strings.TrimSpace(input)
 	if trimmed == "" {
 		return nil, nil
 	}
-	if len(trimmed) > MaxFilterLength {
-		return nil, fmt.Errorf("filter exceeds maximum length of %d bytes", MaxFilterLength)
+	if len(trimmed) > maxFilterLength {
+		return nil, fmt.Errorf("filter exceeds maximum length of %d bytes", maxFilterLength)
 	}
 	p := &parser{input: []rune(trimmed), pos: 0}
 	node, err := p.parseOr()
@@ -97,8 +97,8 @@ func (p *parser) parsePrimary() (Node, error) {
 	p.skipWhitespace()
 	if p.match('(') {
 		p.depth++
-		if p.depth > MaxParenDepth {
-			return nil, fmt.Errorf("grouping depth %d exceeds maximum %d", p.depth, MaxParenDepth)
+		if p.depth > maxParenDepth {
+			return nil, fmt.Errorf("grouping depth %d exceeds maximum %d", p.depth, maxParenDepth)
 		}
 		node, err := p.parseOr()
 		if err != nil {
@@ -212,8 +212,8 @@ func (p *parser) parseListArguments() (any, error) {
 		if val == "" && p.peek() != ')' {
 			return nil, fmt.Errorf("expected argument value at position %d", p.pos)
 		}
-		if len(values) == MaxListValues {
-			return nil, fmt.Errorf("argument list exceeds maximum of %d values", MaxListValues)
+		if len(values) == maxListValues {
+			return nil, fmt.Errorf("argument list exceeds maximum of %d values", maxListValues)
 		}
 		values = append(values, val)
 

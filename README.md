@@ -257,14 +257,14 @@ alias "categories": field "Categoryz" not found on aliasProduct
 
 Filters are fully parameterized (`?` placeholders) and selectors are validated against the model, so values cannot escape into SQL. Input bounds exist so a hostile request cannot exhaust the database or the server:
 
-| Bound             | Value | Enforced when                                   |
-| ----------------- | ----- | ----------------------------------------------- |
-| `MaxFilterLength` | 8192  | `Parse` rejects filters longer than 8 KB        |
-| `MaxParenDepth`   | 100   | `Parse` rejects deeper `(...)` nesting          |
-| `MaxListValues`   | 2000  | `Parse` rejects `=in=`/`=out=` lists that large |
-| `MaxLimit`        | 1000  | `Pagination.Sanitize` clamps `limit`            |
-| `MaxPage`         | 10000 | `Pagination.Sanitize` clamps `page` (OFFSET)    |
-| Max join depth    | 5     | `BuildQuery` rejects deeper selectors           |
+| Bound          | Value | Enforced when                                   |
+| -------------- | ----- | ----------------------------------------------- |
+| Filter length  | 8192  | `Parse` rejects filters longer than 8 KB        |
+| Paren depth    | 100   | `Parse` rejects deeper `(...)` nesting          |
+| List values    | 2000  | `Parse` rejects `=in=`/`=out=` lists that large |
+| `MaxLimit`     | 1000  | `BuildPageableQuery` clamps `limit`             |
+| `MaxPage`      | 10000 | `BuildPageableQuery` clamps `page` (OFFSET)     |
+| Max join depth | 5     | `BuildQuery` rejects deeper selectors           |
 
 `BuildQuery` alone applies no `LIMIT`; prefer `BuildPageableQuery` / `BuildQueryWithParams` for request-facing endpoints so results are capped at `MaxLimit`.
 
@@ -281,9 +281,8 @@ Filters are fully parameterized (`?` placeholders) and selectors are validated a
 | `ParseSort(raw string)`                   | Parse `field:desc,field2:asc` into `[]Sort`                           |
 | `ParseListParams(...)`                    | Parse filter + sort + page + page size into `Params`                  |
 | `WithAliases(db, model, aliases)`         | Register aliases against a model for the `*gorm.DB` (eager-validated) |
-| `Aliases`                                 | `map[string]string` public path → internal Go field path            |
+| `Aliases`                                 | `map[string]string` public path → internal Go field path              |
 | `Params`                                  | `{ Pagination, Filter Node, Sorts []Sort }`                           |
-| `Pagination.Sanitize()`                   | Clamp page/limit; returns `(page, limit, offset)`                     |
 | `Node`                                    | AST: `ComparisonNode`, `AndNode`, `OrNode`                            |
 | `DefaultLimit` / `MaxLimit` / `MaxPage`   | Pagination bounds (`10` / `1000` / `10000`)                           |
 

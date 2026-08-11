@@ -78,7 +78,7 @@ func TestPaginationSanitize(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := Pagination{Page: tt.page, Limit: tt.limit}
-			page, limit, offset := p.Sanitize()
+			page, limit, offset := p.sanitize()
 			if page != tt.wantPage {
 				t.Errorf("page: want %d, got %d", tt.wantPage, page)
 			}

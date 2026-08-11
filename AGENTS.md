@@ -16,7 +16,7 @@ RSQL-style filter builder for GORM. Single Go package `rsql` at the repo root (m
 
 ## Architecture (parse → validate → build)
 
-- `parser.go`: RSQL string → AST (`Node`/`AndNode`/`OrNode`/`ComparisonNode` in `ast.go`). Enforces DoS bounds: `MaxFilterLength` 8192, `MaxParenDepth` 100, `MaxListValues` 2000.
+- `parser.go`: RSQL string → AST (`Node`/`AndNode`/`OrNode`/`ComparisonNode` in `ast.go`). Enforces DoS bounds: filter length 8192 bytes, paren depth 100, `=in=`/`=out=` list size 2000.
 - `validator.go`: validates selectors against the model, enforces `defaultMaxJoinDepth` = 5.
 - `query_builder.go`: builds joins + WHERE clauses; also all operator/wildcard logic. `rootInfoCache` (`sync.Map`) caches root model metadata per `reflect.Type`.
 - `apply.go`: `ApplySort`, `ApplyPagination`, `BuildPageableQuery`/`PagedQuery`, `BuildQueryWithParams`.
@@ -39,4 +39,4 @@ RSQL-style filter builder for GORM. Single Go package `rsql` at the repo root (m
 
 ## API surface (do not break)
 
-`Parse`, `BuildQuery`, `ApplySort`, `ApplyPagination`, `BuildQueryWithParams`, `BuildPageableQuery`, `ParseSort`, `ParseListParams`, `WithAliases`, `Aliases`, `Params`, `Pagination.Sanitize`, `Node` types, and bounds constants are public and referenced in the README API table.
+`Parse`, `BuildQuery`, `ApplySort`, `ApplyPagination`, `BuildQueryWithParams`, `BuildPageableQuery`, `ParseSort`, `ParseListParams`, `WithAliases`, `Aliases`, `Params`, `PagedQuery`, `Node` types, and `DefaultLimit`/`MaxLimit`/`MaxPage` are public and referenced in the README API table.

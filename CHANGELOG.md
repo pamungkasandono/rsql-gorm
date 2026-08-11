@@ -11,10 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `QueryBuilder` and `Validator` are now unexported internal types. They were
   not part of the documented API and had no exported members users could call.
+- `MaxFilterLength`, `MaxParenDepth` and `MaxListValues` are now unexported;
+  they are parser-internal DoS limits with no external consumers.
+- `Pagination.Sanitize` is now the unexported `sanitize`; it was redundant with
+  the already-public `PagedQuery.Page`/`Limit`/`Offset`, which carry the same
+  clamped values.
 - Added Go doc comments to the public API surface (`Parse`, AST node types,
-  `BuildQuery`, `Aliases`, `WithAliases`, `Params`, `Pagination`,
-  `Pagination.Sanitize`, `Sort`, `ParseSort`, `ParseListParams`, and the bounds
-  constants).
+  `BuildQuery`, `Aliases`, `WithAliases`, `Params`, `Pagination`, `Sort`,
+  `ParseSort`, `ParseListParams`).
 
 ## [0.3.0] - 2026-08-10
 

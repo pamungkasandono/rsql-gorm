@@ -69,10 +69,10 @@ func (qb *queryBuilder) resolveSortSelector(selector string) (string, []relStep,
 	return resolved.alias + "." + resolved.column, resolved.steps, nil
 }
 
-// ApplyPagination clamps page and limit via Pagination.Sanitize and applies
+// ApplyPagination clamps page and limit via Pagination.sanitize and applies
 // LIMIT/OFFSET to the query.
 func ApplyPagination(db *gorm.DB, p Pagination) *gorm.DB {
-	_, limit, offset := p.Sanitize()
+	_, limit, offset := p.sanitize()
 	return db.Limit(limit).Offset(offset)
 }
 
@@ -128,7 +128,7 @@ func BuildPageableQuery(db *gorm.DB, params *Params, model any) (*PagedQuery, er
 		joins = append(joins, j.Name)
 	}
 
-	page, limit, offset := params.Pagination.Sanitize()
+	page, limit, offset := params.Pagination.sanitize()
 	return &PagedQuery{
 		base:    db,
 		model:   model,
