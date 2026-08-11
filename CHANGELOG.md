@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-11
+
 ### Changed
 
 - `QueryBuilder` and `Validator` are now unexported internal types. They were
@@ -130,7 +132,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - CI workflow (GitHub Actions): `go vet` + `go test -race` on Go 1.26.
 - `README.md`, `CHANGELOG.md`, `.gitignore`.
 
-[Unreleased]: https://github.com/pamungkasandono/rsql-gorm/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/pamungkasandono/rsql-gorm/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/pamungkasandono/rsql-gorm/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/pamungkasandono/rsql-gorm/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/pamungkasandono/rsql-gorm/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/pamungkasandono/rsql-gorm/releases/tag/v0.1.0
